@@ -4,7 +4,8 @@
 <<
   /objectsByNo <<>>
   /stdout (%stdout) (w) file
-  
+  /stringbuffer 128 string def
+
   /fdf2XfdfAnnotNames <<
     % TODO: This list is not at all exhaustive
     /Line (line)
@@ -12,7 +13,7 @@
     /FreeText (freetext)
     /Square (square)
   >>
-  
+
   /pdf2XMLCharDict <<
     % We list the characters that aren't identical in PDF and Unicode
     % explicitly.
@@ -35,11 +36,11 @@
     131 (&#x2026;) % HORIZONTAL ELLIPSIS
     132 (&#x2014;) % EM DASH
     133 (&#x2013;) % EN DASH
-    134 (&#x0192;) % 
+    134 (&#x0192;) %
     135 (&#x2044;) % FRACTION SLASH (solidus)
     136 (&#x2039;) % SINGLE LEFT-POINTING QUOTATION MARK
     137 (&#x203A;) % SINGLE RIGHT-POINTING QUOTATION MARK
-    138 (&#x2212;) % 
+    138 (&#x2212;) %
     139 (&#x2030;) % PER MILLE SIGN
     140 (&#x201E;) % DOUBLE LOW-9 (quotedblbase)
     141 (&#x201C;) % LEFT DOUBLE QUOTATION MARK (double quote left)
@@ -63,7 +64,7 @@
     159 null
     160 (&#x20AC;) % EURO SIGN
     173 null
-    
+
     % Earlier entries overrule later entries, so the escape strings
     % defined above remain intact when we add the characters that
     % do not change.
@@ -73,6 +74,12 @@
       put             % charcode string
     } for
   >>
+
+  /annotPropertyHandlers <<
+    /Rect {                        % rectArray
+      (rect) exch                  % rect rectArray
+    }
+  >>
 >> begin
 
 /writeEscapedChar {        % charCode
@@ -81,6 +88,35 @@
   //stdout exch            % stdout string
   writestring              % -/-
 } bind def
+
+/attributeTypeHandlers <<
+  /stringtype {
+    //writeEscapedChar forall
+  } bind
+
+  /arraytype {                   % array
+    % We turn arrays into comma separated attribute strings
+    () exch                      % separator array
+    {                            % separator number
+      exch                       % number separator
+      //stdout exch writestring  % number
+      % make sure we only convert numbers - they're safe in XML
+      10 //stringbuffer cvrs     % numberString
+      //stdout exch writestring  % -/-
+      (,)                        % separator
+    } forall
+    pop
+  } bind
+
+  /integertype {
+    10 //stringbuffer cvrs
+  } bind
+
+  /realtype {
+    10 //stringbuffer cvrs
+  } bind
+>> def
+
 
 <<
   % The commands "R" and "obj" take two parameters:
@@ -109,7 +145,7 @@
       } ifelse
     } loop
   } bind
-  
+
   /trailer {
     % We've reached the end of the file and can start outputting XFDF.
     % We push a dictionary that intercepts the final closing dictionary marker
@@ -123,7 +159,7 @@
       }
     >> begin
   }
-  
+
   /writeXfdf {                   % rootObj
     (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
     /FDF get                     % rootObjFdfDict
@@ -134,7 +170,7 @@
     {                            % rootObjFdfDict annotNo
       getObjByNo                 % rootObjFdfDict annotDict
       dup /Parent known {        % rootObjFdfDict annotDict
-        pop                      % rootObjFdfDict 
+        pop                      % rootObjFdfDict
       }{                         % rootObjFdfDict annotDict
         writeAnnot               % rootObjFdfDict
       } ifelse                   % rootObjFdfDict
@@ -144,45 +180,45 @@
     (xfdf) writeEndTag           % -/-
     quit                         % -/-
   }
-  
+
   /writeDocHref {                % rootObjFdfDict
     % Document reference (stored in /UF and /F)
-    % TODO: 
-    %  * /DOS, /MAC or /UNIX are present, /F is optional. 
+    % TODO:
+    %  * /DOS, /MAC or /UNIX are present, /F is optional.
     %  * If /UF is present, Adobe recommends using that
     % Make this more robust!
-    (f) [ [(href)                % rootObjFdfDict (f) [ [ (href)
-    5 -1 roll                    % (f) [ [ (href) rootObjFdfDict
-    /F get ] ]                   % (f) [[ (href) filepath ]]
-    writeStartTag                % -/-
-    (f) writeEndTag              % -/-
+    (f) [ [(href)                  % rootObjFdfDict (f) [ [ (href)
+    5 -1 roll                      % (f) [ [ (href) rootObjFdfDict
+    /F get ] ]                     % (f) [[ (href) filepath ]]
+    writeStartTag                  % -/-
+    (f) writeEndTag                % -/-
   }
-  
-  /writeStartTag {               % name attributes
-    //stdout (<) writestring     % name attributes
-    exch                         % attributes name
-    //stdout                     % attributes name stdout
-    exch                         % attributes stdout name
-    writestring                  % attributeDict
-    {                            % [attName attValue]
-      //stdout ( ) writestring   % [attName attValue]
-      dup 0 get                  % [attName attValue] attName
-      //stdout exch writestring  % [attName attValue]
-      //stdout (=") writestring  % [attName attValue]
-      1 get                      % attValue
-      //writeEscapedChar forall  % -/-
-      //stdout (") writestring   % -/-
+
+  /writeStartTag {                  % name attributes
+    //stdout (<) writestring        % name attributes
+    exch                            % attributes name
+    //stdout exch writestring       % attributes
+    { % forall                      % [attName attValue]
+      //stdout ( ) writestring      % [attName attValue]
+      dup 0 get                     % [attName attValue] attName
+      //stdout exch writestring     % [attName attValue]
+      //stdout (=") writestring     % [attName attValue]
+      1 get                         % attValue
+      dup type                      % attValue attType
+      //attributeTypeHandlers exch  % attValue attributeProcessors attType
+      get exec                      % -/-
+      //stdout (") writestring      % -/-
     } forall
     //stdout (>\n) writestring
   } bind
-  
+
   /writeEndTag {                 % name
     //stdout (</) writestring    % name
     //stdout exch                % stdout name
     writestring                  % -/-
     //stdout (>\n) writestring   % -/-
   } bind
-  
+
   /registerChildren {               % annotNumberArray
     {                               % annotObjNumber
       getObjByNo                    % annotObj
@@ -210,29 +246,36 @@
       } ifelse
     } forall
   } bind
-  
-  /writeAnnot {                    % annotDict
-    dup /Subtype get               % annotDict annotType
-    //fdf2XfdfAnnotNames exch get  % annotDict tagName
-    exch 2 copy                    % tagName annotDict tagName annotDict
-    [ exch                         % tagName annotDict tagName [ annotDict
-    dup                            % tagName annotDict tagName [ annotDict annotDict
-    {                              % tagName annotDict tagName [ attName attValue ... annotDict key value
-      pop pop % TODO: Write attributes
-    } forall                       % tagName annotDict tagName [ attName attValue ... annotDict
-    pop ]                          % tagName annotDict tagName attsDict
-    writeStartTag                  % tagName annotDict
-    dup /@Kids@ known { % if       % tagName annotDict
-      /@Kids@ get                  % tagName childListDict
-      {                            % tagName childAnnotDict true
-        pop writeAnnot             % tagName
+
+  /writeAnnot {                          % annotDict
+    dup /Subtype get                     % annotDict annotType
+    //fdf2XfdfAnnotNames exch get        % annotDict tagName
+    exch 2 copy                          % tagName annotDict tagName annotDict
+    [ exch                               % tagName annotDict tagName [ annotDict
+    dup                                  % tagName annotDict tagName [ annotDict annotDict
+    {                                    % tagName annotDict tagName [ attArray? ... annotDict key value
+      exch //annotPropertyHandlers exch  % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
+      2 copy known { % ifelse            % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
+        get exec                         % tagName annotDict tagName [ attArray? ... annotDict attName attValue
+        2 array astore                   % tagName annotDict tagName [ attArray? ... annotDict attArray
+        exch                             % tagName annotDict tagName [ attArray+ ... annotDict
+      }{ % else                          % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
+        pop pop pop                      % tagName annotDict tagName [ attArray? ... annotDict
+      } ifelse                           % tagName annotDict tagName [ attArray? ... annotDict
+    } forall                             % tagName annotDict tagName [ attArray? ... annotDict
+    pop ]                                % tagName annotDict tagName attsDict
+    writeStartTag                        % tagName annotDict
+    dup /@Kids@ known { % if             % tagName annotDict
+      /@Kids@ get                        % tagName childListDict
+      {                                  % tagName childAnnotDict true
+        pop writeAnnot                   % tagName
       } forall
-    }{ % else                      % tagName annotDict
-      pop                          % tagName
+    }{ % else                            % tagName annotDict
+      pop                                % tagName
     } ifelse
     writeEndTag
   } bind
-  
+
   /getObjByNo {                    % objNumber
     //objectsByNo exch get         % obj
   }
