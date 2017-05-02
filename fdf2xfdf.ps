@@ -1,0 +1,161 @@
+% Temporary dicationary for directly referencing //objregistry
+<<
+  /objregistry <<>>
+  /stdout (%stdout) (w) file
+  
+  /pdf2XMLCharDict <<
+    % We list the characters that aren't identical in PDF and Unicode
+    % explicitly.
+
+    % Is mapping 22 (= 0x16) to 0x17 correct or just a error in the specs?
+    % In any case, it doesn't really matter for the control characters.
+     22 (&#x0017;) % (SYNCRONOUS IDLE) U
+     24 (&#x02D8;) % BREVE
+     25 (&#x02C7;) % CARON
+     26 (&#x02C6;) % MODIFIER ACCENT
+     27 (&#x02D9;) % DOT ABOVE
+     28 (&#x02DD;) % DOUBLE ACUTE ACCENT
+     29 (&#x02DB;) % OGONEK
+     30 (&#x02DA;) % RING ABOVE
+     31 (&#x02DC;) % SMALL TILDE
+    127 null
+    128 (&#x2022;) % BULLET
+    129 (&#x2020;) % DAGGER
+    130 (&#x2021;) % DOUBLE DAGGER
+    131 (&#x2026;) % HORIZONTAL ELLIPSIS
+    132 (&#x2014;) % EM DASH
+    133 (&#x2013;) % EN DASH
+    134 (&#x0192;) % 
+    135 (&#x2044;) % FRACTION SLASH (solidus)
+    136 (&#x2039;) % SINGLE LEFT-POINTING QUOTATION MARK
+    137 (&#x203A;) % SINGLE RIGHT-POINTING QUOTATION MARK
+    138 (&#x2212;) % 
+    139 (&#x2030;) % PER MILLE SIGN
+    140 (&#x201E;) % DOUBLE LOW-9 (quotedblbase)
+    141 (&#x201C;) % LEFT DOUBLE QUOTATION MARK (double quote left)
+    142 (&#x201D;) % RIGHT DOUBLE (quotedblright)
+    143 (&#x2018;) % LEFT SINGLE (quoteleft) QUOTATION MARK
+    144 (&#x2019;) % RIGHT SINGLE (quoteright) QUOTATION MARK
+    145 (&#x201A;) % SINGLE LOW-9 (quotesinglbase) QUOTATION MARK
+    146 (&#x2122;) % TRADE MARK SIGN
+    147 (&#xFB01;) % LATIN SMALL LIGATURE FI
+    148 (&#xFB02;) % LATIN SMALL LIGATURE FL
+    149 (&#x0141;) % LATIN CAPITAL LETTER L WITH STROKE
+    150 (&#x0152;) % LATIN CAPITAL LIGATURE OE
+    151 (&#x0160;) % LATIN CAPITAL LETTER S WITH CARON
+    152 (&#x0178;) % LATIN CAPITAL DIAERESIS
+    153 (&#x017D;) % LATIN CAPITAL LETTER Z WITH CARON
+    154 (&#x0131;) % LATIN SMALL LETTER DOTLESS I l
+    155 (&#x0142;) % LATIN SMALL LETTER L WITH STROKE
+    156 (&#x0153;) % LATIN SMALL LIGATURE OE
+    157 (&#x0161;) % LATIN SMALL LETTER S WITH CARON
+    158 (&#x017E;) % LATIN SMALL LETTER Z WITH CARON
+    159 null
+    160 (&#x20AC;) % EURO SIGN
+    173 null
+    
+    % Earlier entries overrule later entries, so the escape strings
+    % defined above remain intact when we add the characters that
+    % do not change.
+    1 1 255 {         % charcode
+      1 string dup 0  % charcode string string 0
+      3 index         % charcode string string 0 charcode
+      put             % charcode string
+    } for
+  >>
+>> begin
+
+/writeEscapedChar {        % charCode
+  //pdf2XMLCharDict exch   % charToStringMap charCode
+  get                      % string
+  //stdout exch            % stdout string
+  writestring              % -/-
+} bind def
+
+
+<<
+  % The commands "R" and "obj" take two parameters:
+  %  * The object number
+  %  * The generation number
+  % In XFDF (and maybe even FDF), the generation number doesn't seem to have
+  % meaning, so we discard it by popping.
+  /R /pop load
+  % Leaves on the stack: objregistry objNumber
+  /obj {pop //objregistry exch} bind
+
+  % Arguments: objregistry objtNumber object
+  /endobj /put load
+
+  /stream {
+    { % loop
+      currentfile token { % ifelse
+        /endstream eq {
+          exit
+        } if
+      }{ % else
+        % TODO: something is wrong here as the stream
+        %   is expected to end with an "endstream" token.
+        %   How can we signal the error?
+        exit
+      } ifelse
+    } loop
+  } bind
+  
+  /trailer {
+    % We've reached the end of the file and can start outputting XFDF.
+    % We push a dictionary that intercepts the final closing dictionary marker
+    <<
+      (>>) cvn {                 % << /Root rootObjNumber
+        end  % end this ">>" interception dictionary
+        >>                       % trailerObj
+        /Root get                % rootObjNumber
+        //objregistry exch       % objRegistry rootObjNumber
+        get                      % rootObj
+        writeXfdf                % -/-
+      }
+    >> begin
+  }
+  
+  /writeXfdf {                   % rootObj
+    (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
+    /FDF get                     % rootObjFdfDict
+    dup /Annots get              % rootObjFdfDict annotNumberArray
+    {writeAnnot} forall          % rootObjFdfDict
+    (f) [[ (href)                % rootObjFdfDict (f) [[ (href)
+    4 index                      % rootObjFdfDict (f) [[ (href) rootObjFdfDict
+    /UF get ]]                   % rootObjFdfDict (f) [[ (href) filepath ]]
+    writeStartTag
+    (f) writeEndTag
+    (xfdf) writeEndTag
+  }
+  
+  /writeStartTag {               % name attributes
+    //stdout (<) writestring     % name attributes
+    exch                         % attributes name
+    //stdout                     % attributes name stdout
+    exch                         % attributes stdout name
+    writestring                  % attributeDict
+    {                            % [attName attValue]
+      //stdout ( ) writestring   % [attName attValue]
+      dup 0 get                  % [attName attValue] attName
+      //stdout exch writestring  % [attName attValue]
+      //stdout (=") writestring  % [attName attValue]
+      1 get                      % attValue
+      //writeEscapedChar forall  % -/-
+      //stdout (") writestring   % -/-
+    } forall
+    //stdout (>\n) writestring
+  } bind
+  
+  /writeEndTag {                 % name
+    //stdout (</) writestring    % name
+    //stdout exch                % stdout name
+    writestring                  % -/-
+    //stdout (>\n) writestring   % -/-
+  } bind
+  
+  /writeAnnot {                  % objNumber
+    % TODO: Implement
+    pop
+  } bind
+>> end begin  % pop the temporary /objregitry dict, begin the new one
