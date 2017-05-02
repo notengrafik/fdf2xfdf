@@ -130,12 +130,19 @@
     % Loop through all annotations
     dup /Annots get              % rootObjFdfDict annotNumberArray
     dup registerChildren         % rootObjFdfDict annotNumberArray
-    (annots) [] writeStartTag
-    {writeAnnot} forall          % rootObjFdfDict
-    (annots) writeEndTag
-    writeDocHref                 % rootObjFdfDict
-    (xfdf) writeEndTag
-    quit
+    (annots) [] writeStartTag    % rootObjFdfDict annotNumberArray
+    {                            % rootObjFdfDict annotNo
+      getObjByNo                 % rootObjFdfDict annotDict
+      dup /Parent known {        % rootObjFdfDict annotDict
+        pop                      % rootObjFdfDict 
+      }{                         % rootObjFdfDict annotDict
+        writeAnnot               % rootObjFdfDict
+      } ifelse                   % rootObjFdfDict
+    } forall                     % rootObjFdfDict
+    (annots) writeEndTag         % rootObjFdfDict
+    writeDocHref                 % -/-
+    (xfdf) writeEndTag           % -/-
+    quit                         % -/-
   }
   
   /writeDocHref {                % rootObjFdfDict
@@ -147,8 +154,8 @@
     (f) [ [(href)                % rootObjFdfDict (f) [ [ (href)
     5 -1 roll                    % (f) [ [ (href) rootObjFdfDict
     /F get ] ]                   % (f) [[ (href) filepath ]]
-    writeStartTag
-    (f) writeEndTag
+    writeStartTag                % -/-
+    (f) writeEndTag              % -/-
   }
   
   /writeStartTag {               % name attributes
@@ -204,9 +211,7 @@
     } forall
   } bind
   
-  /writeAnnot {                    % objNumber
-    % TODO: Implement this!
-    getObjByNo                     % annotDict
+  /writeAnnot {                    % annotDict
     dup /Subtype get               % annotDict annotType
     //fdf2XfdfAnnotNames exch get  % annotDict tagName
     exch 2 copy                    % tagName annotDict tagName annotDict
@@ -217,7 +222,14 @@
     } forall                       % tagName annotDict tagName [ attName attValue ... annotDict
     pop ]                          % tagName annotDict tagName attsDict
     writeStartTag                  % tagName annotDict
-    pop % TODO: Write children
+    dup /@Kids@ known { % if       % tagName annotDict
+      /@Kids@ get                  % tagName childListDict
+      {                            % tagName childAnnotDict true
+        pop writeAnnot             % tagName
+      } forall
+    }{ % else                      % tagName annotDict
+      pop                          % tagName
+    } ifelse
     writeEndTag
   } bind
   
