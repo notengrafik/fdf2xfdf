@@ -205,12 +205,20 @@
   } bind
 
   /IT {
-    (IT) exch              % (IT) name
-    //stringbuffer cvs     % (IT) nameInStringBuffer
-    dup length string dup  % (IT) nameInStringBuffer finalString finalString
-    3 -1 roll              % (IT) finalString finalString nameInStringBuffer
-    0 exch                 % (IT) finalString finalString 0 nameInStringBuffer
-    putinterval            % (IT) finalString
+    % There seems to be a bug in Adobe's XFDF export:
+    % Per the specs, /IT should be translated to an "intent" attribute,
+    % but the exported attribute is named "IT" as well. We simple do both
+    % so that no matter whether an application adheres to the specs or
+    % expects flawed Adobe export can work with what we write.
+    //stringbuffer cvs     % nameInStringBuffer
+    dup length string dup  % nameInStringBuffer finalString finalString
+    3 -1 roll              % finalString finalString nameInStringBuffer
+    0 exch                 % finalString finalString 0 nameInStringBuffer
+    putinterval            % finalString
+    dup                    % finalString finalString
+    (IT) exch              % finalString (IT) finalString
+    2 array astore         % finalString itAttArray
+    exch (intent) exch     % itAttArray (intent) finalString
   } bind
 
   /F {                              % bitmask
