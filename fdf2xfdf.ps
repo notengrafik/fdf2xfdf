@@ -105,16 +105,22 @@
 
   /integertype {
     10 //stringbuffer cvrs
+    //stdout exch writestring
   } bind
 
   /realtype {
     10 //stringbuffer cvrs
+    //stdout exch writestring
   } bind
 >> def
 
 /annotPropertyHandlers <<
   /Rect {                        % rectArray
     (rect) exch                  % rect rectArray
+  } bind
+
+  /Page {         % pageNumber
+    (page) exch
   } bind
 
   /C {                              % rgbArray
