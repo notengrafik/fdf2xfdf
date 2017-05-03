@@ -196,6 +196,42 @@
   } bind
 >> def
 
+/implicitKidsWriters <<
+  /FreeText {                              % annotDict
+    dup /RC known { % ifelse               % annotDict
+      (contents-richtext)[] writeStartTag  % annotDict
+      dup /RC get                          % annotDict xmlString
+      % We need to strip the XML declaration, if present
+      (?>) search { % if                   % annotDict htmlBodyString (?>)? xmlDecl?
+        pop pop                            % annotDict htmlBodyString
+      } if                                 % annotDict htmlBodyString
+      //stdout exch writestring            % annotDict
+      (contents-richtext) writeEndTag      % annotDict
+    }{ % else                              % annotDict
+      dup /Contents known { % if           % annotDict
+        (contents)[] writeStartTag         % annotDict
+        dup /Contents get                  % annotDict contentString
+        //stdout exch writestring          % annotDict
+        (contents) writeEndTag             % annotDict
+      } if                                 % annotDict
+    } ifelse                               % annotDict
+
+    dup /DA known {                        % annotDict
+      (defaultappearance)[] writeStartTag  % annotDict
+      dup /DA get                          % annotDict appearanceString
+      //stdout exch writestring            % annotDict
+      (defaultappearance) writeEndTag      % annotDict
+    } if
+
+    dup /DS known {                        % annotDict
+      (defaultstyle)[] writeStartTag       % annotDict
+      dup /DS get                          % annotDict styleString
+      //stdout exch writestring            % annotDict
+      (defaultstyle) writeEndTag           % annotDict
+    } if                                   % annotDict
+
+    pop
+  } bind
 >> def
 
 
@@ -345,13 +381,18 @@
     ]                                    % tagName annotDict tagName attsDict
     writeStartTag                        % tagName annotDict
     dup /@Kids@ known { % if             % tagName annotDict
-      /@Kids@ get                        % tagName childListDict
-      {                                  % tagName childAnnotDict true
-        pop writeAnnot                   % tagName
-      } forall
-    }{ % else                            % tagName annotDict
-      pop                                % tagName
-    } ifelse
+      dup /@Kids@ get                    % tagName annotDict childListDict
+      {                                  % tagName annotDict childAnnotDict true
+        pop writeAnnot                   % tagName annotDict
+      } forall                           % tagName annotDict
+    } if                                 % tagName annotDict
+    dup /Subtype get                     % tagName annotDict annotType
+    //implicitKidsWriters exch           % tagName annotDict implicitKidsCreators annotType
+    2 copy known { % ifelse              % tagName annotDict implicitKidsCreators annotType
+      get exec                           % tagName
+    }{ % else                            % tagName annotDict implicitKidsCreators annotType
+      pop pop pop                        % tagName
+    } ifelse                             % tagName
     writeEndTag
   } bind
 
