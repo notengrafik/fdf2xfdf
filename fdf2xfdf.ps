@@ -239,7 +239,17 @@
     } forall                        % [ flag* bitmask
     pop ]                           % flagArray
     (flags) exch                    % (flags) flagArray
-  }
+  } bind
+
+  /BS {                             % objNumber
+    getObjByNo                      % borderStyleDict
+    dup /W known { % ifelse         % borderStyleDict
+      /W get                        % width
+      (width) exch                  % (width) width
+    }{ % else                       % borderStyleDict
+      pop                           % -/-
+    } ifelse                        % (width)? width?
+  } bind
 >> def
 
 /implicitKidsWriters <<
@@ -291,7 +301,7 @@
   % Leaves on the stack: objectsByNo objNumber
   /obj {pop //objectsByNo exch} bind
 
-  % Arguments: objectsByNo objtNumber object
+  % Arguments: objectsByNo objNumber object
   /endobj /put load
 
   /stream {
