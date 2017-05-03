@@ -5,6 +5,7 @@
   /objectsByNo <<>>
   /stdout (%stdout) (w) file
   /stringbuffer 128 string def
+  /blackColor (#000000)
 
   /fdf2XfdfAnnotNames <<
     % TODO: This list is not at all exhaustive
@@ -74,12 +75,6 @@
       put             % charcode string
     } for
   >>
-
-  /annotPropertyHandlers <<
-    /Rect {                        % rectArray
-      (rect) exch                  % rect rectArray
-    }
-  >>
 >> begin
 
 /writeEscapedChar {        % charCode
@@ -114,6 +109,32 @@
 
   /realtype {
     10 //stringbuffer cvrs
+  } bind
+>> def
+
+/annotPropertyHandlers <<
+  /Rect {                        % rectArray
+    (rect) exch                  % rect rectArray
+  } bind
+
+  /C {                              % rgbArray
+    % Sum up all components to a single number that can be converted to hex
+    0 exch {                        % compoundColorValue colorComponent
+      255 mul round cvi             % compoundColorValue colorComponentByte
+      exch 256 mul                  % colorComponentByte compoundColorValue'
+      add                           % compoundColorValue''
+    } forall                        % compoundColorValue''
+    16 //stringbuffer cvrs          % hexString
+    % Now we need to add a leading hash and possibly leading zeroes.
+    7 string                        % hexString hexStringWithHash
+    % Initialize color with leading hash and all zeroes
+    dup 0 //blackColor putinterval  % hexString hexStringWithHash
+    dup 7                           % hexString hexStringWithHash hexStringWithHash 7
+    3 index length                  % hexString hexStringWithHash hexStringWithHash 7 hexLength
+    sub                             % hexString hexStringWithHash hexStringWithHash leadingZerosAndHashesCount
+    4 -1 roll                       % hexStringWithHash hexStringWithHash leadingZerosAndHashesCount hexString
+    putinterval                     % hexStringWithHash
+    (color) exch                    % (color) hexStringWithHash
   } bind
 >> def
 
