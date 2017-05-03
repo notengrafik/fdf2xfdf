@@ -365,6 +365,8 @@
   }
 
   /writeXfdf {                   % rootObj
+    % Adobe Reader doesn't accept this without XML declaration
+    //stdout (<?xml version="1.0"?>\n) writestring % rootObj
     (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
