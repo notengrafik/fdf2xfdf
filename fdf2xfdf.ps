@@ -1,0 +1,484 @@
+% TODO: Make everything more robust. Expect broken FDF!
+
+% Temporary dictionary for making entries immediately evaluable using "//"
+<<
+  /objectsByNo <<>>
+  /stdout (%stdout) (w) file
+  /stringbuffer 128 string def
+  /blackColor (#000000)
+
+  /fdf2XfdfAnnotNames <<
+    % TODO: This list is not at all exhaustive
+    /Line (line)
+    /Popup (popup)
+    /FreeText (freetext)
+    /Square (square)
+  >>
+
+  /pdf2XMLCharDict <<
+    % We list the characters that aren't identical in PDF and Unicode
+    % explicitly.
+
+    % Is mapping 22 (= 0x16) to 0x17 correct or just a error in the specs?
+    % In any case, it doesn't really matter for the control characters.
+     22 (&#x0017;) % (SYNCRONOUS IDLE) U
+     24 (&#x02D8;) % BREVE
+     25 (&#x02C7;) % CARON
+     26 (&#x02C6;) % MODIFIER ACCENT
+     27 (&#x02D9;) % DOT ABOVE
+     28 (&#x02DD;) % DOUBLE ACUTE ACCENT
+     29 (&#x02DB;) % OGONEK
+     30 (&#x02DA;) % RING ABOVE
+     31 (&#x02DC;) % SMALL TILDE
+    127 null
+    128 (&#x2022;) % BULLET
+    129 (&#x2020;) % DAGGER
+    130 (&#x2021;) % DOUBLE DAGGER
+    131 (&#x2026;) % HORIZONTAL ELLIPSIS
+    132 (&#x2014;) % EM DASH
+    133 (&#x2013;) % EN DASH
+    134 (&#x0192;) %
+    135 (&#x2044;) % FRACTION SLASH (solidus)
+    136 (&#x2039;) % SINGLE LEFT-POINTING QUOTATION MARK
+    137 (&#x203A;) % SINGLE RIGHT-POINTING QUOTATION MARK
+    138 (&#x2212;) %
+    139 (&#x2030;) % PER MILLE SIGN
+    140 (&#x201E;) % DOUBLE LOW-9 (quotedblbase)
+    141 (&#x201C;) % LEFT DOUBLE QUOTATION MARK (double quote left)
+    142 (&#x201D;) % RIGHT DOUBLE (quotedblright)
+    143 (&#x2018;) % LEFT SINGLE (quoteleft) QUOTATION MARK
+    144 (&#x2019;) % RIGHT SINGLE (quoteright) QUOTATION MARK
+    145 (&#x201A;) % SINGLE LOW-9 (quotesinglbase) QUOTATION MARK
+    146 (&#x2122;) % TRADE MARK SIGN
+    147 (&#xFB01;) % LATIN SMALL LIGATURE FI
+    148 (&#xFB02;) % LATIN SMALL LIGATURE FL
+    149 (&#x0141;) % LATIN CAPITAL LETTER L WITH STROKE
+    150 (&#x0152;) % LATIN CAPITAL LIGATURE OE
+    151 (&#x0160;) % LATIN CAPITAL LETTER S WITH CARON
+    152 (&#x0178;) % LATIN CAPITAL DIAERESIS
+    153 (&#x017D;) % LATIN CAPITAL LETTER Z WITH CARON
+    154 (&#x0131;) % LATIN SMALL LETTER DOTLESS I l
+    155 (&#x0142;) % LATIN SMALL LETTER L WITH STROKE
+    156 (&#x0153;) % LATIN SMALL LIGATURE OE
+    157 (&#x0161;) % LATIN SMALL LETTER S WITH CARON
+    158 (&#x017E;) % LATIN SMALL LETTER Z WITH CARON
+    159 null
+    160 (&#x20AC;) % EURO SIGN
+    173 null
+
+    % Earlier entries overrule later entries, so the escape strings
+    % defined above remain intact when we add the characters that
+    % do not change.
+    1 1 255 {         % charcode
+      1 string dup 0  % charcode string string 0
+      3 index         % charcode string string 0 charcode
+      put             % charcode string
+    } for
+  >>
+
+  /string2hexstring {           % string
+    dup length 2 mul string     % string fullHexstring
+    dup dup 4 -1 roll           % fullHexstring fullHexstring fullHexstring string
+    {                           % fullHexstring remainingHexstring remainingHexstring char
+      0 exch                    % fullHexstring remainingHexstring remainingHexstring 0 char
+      16 //stringbuffer cvrs    % fullHexstring remainingHexstring remainingHexstring 0 charHexstring
+      putinterval               % fullHexstring remainingHexstring
+      dup length 2 sub          % fullHexstring remainingHexstring newRemainingLength
+      2 exch                    % fullHexstring remainingHexstring 2 newRemainingLength
+      getinterval dup           % fullHexstring remainingHexstring' remainingHexstring'
+    } forall                    % fullHexstring remainingHexstring' remainingHexstring'
+    pop pop                     % fullHexstring
+  } bind
+>> begin
+
+/writeEscapedChar {        % charCode
+  //pdf2XMLCharDict exch   % charToStringMap charCode
+  get                      % string
+  //stdout exch            % stdout string
+  writestring              % -/-
+} bind def
+
+/attributeTypeHandlers <<
+  /stringtype {
+    //writeEscapedChar forall
+  } bind
+
+  /arraytype {                              % array
+    % We turn arrays into comma separated attribute strings
+    () exch                               % separator array
+    {                                     % separator value
+      exch                                % value separator
+      //stdout exch writestring           % value
+      dup type /stringtype eq { % ifelse  % value
+         //writeEscapedChar forall
+      }{ % else
+        % make sure we only convert numbers - they're safe in XML
+        10 //stringbuffer cvrs            % numberString
+        //stdout exch writestring         % -/-
+      } ifelse
+      (,)                                 % separator
+    } forall
+    pop
+  } bind
+
+  /integertype {
+    10 //stringbuffer cvrs
+    //stdout exch writestring
+  } bind
+
+  /realtype {
+    10 //stringbuffer cvrs
+    //stdout exch writestring
+  } bind
+>> def
+
+/annotPropertyHandlers <<
+  /Rect {                        % rectArray
+    (rect) exch                  % rect rectArray
+  } bind
+
+  /Page {         % pageNumber
+    (page) exch
+  } bind
+
+  /C {                              % rgbArray
+    % Sum up all components to a single number that can be converted to hex
+    0 exch {                        % compoundColorValue colorComponent
+      255 mul round cvi             % compoundColorValue colorComponentByte
+      exch 256 mul                  % colorComponentByte compoundColorValue'
+      add                           % compoundColorValue''
+    } forall                        % compoundColorValue''
+    16 //stringbuffer cvrs          % hexString
+    % Now we need to add a leading hash and possibly leading zeroes.
+    7 string                        % hexString hexStringWithHash
+    % Initialize color with leading hash and all zeroes
+    dup 0 //blackColor putinterval  % hexString hexStringWithHash
+    dup 7                           % hexString hexStringWithHash hexStringWithHash 7
+    3 index length                  % hexString hexStringWithHash hexStringWithHash 7 hexLength
+    sub                             % hexString hexStringWithHash hexStringWithHash leadingZerosAndHashesCount
+    4 -1 roll                       % hexStringWithHash hexStringWithHash leadingZerosAndHashesCount hexString
+    putinterval                     % hexStringWithHash
+    (color) exch                    % (color) hexStringWithHash
+  } bind
+
+  /CreationDate {
+    (creationdate) exch
+  } bind
+
+  /M {
+    (date) exch
+  } bind
+
+  /NM {
+    (name) exch
+  } bind
+
+  /Subj {
+    (subject) exch
+  } bind
+
+  /Open {
+    (open) exch
+    % Convert boolean to 'yes' or 'no'
+    {
+      (yes)
+    }{
+      (no)
+    } ifelse
+  } bind
+
+  /T {
+    (title) exch
+  } bind
+
+  /L {                     % coordArray
+    (start) 1 index        % coordArray (start) coordArray
+    0 2 getinterval        % coordArray (start) startCoords
+    2 array astore         % coordArray startAttArray
+    (end) 3 -1 roll        % startAttArray (end) coordArray
+    2 2 getinterval        % startAttArray (end) endCoords
+    % The topmost two elements will be "arrayified" by the calling procedure
+  } bind
+
+  /RD {
+    (fringe) exch
+  } bind
+
+  /IT {
+    % There seems to be a bug in Adobe's XFDF export:
+    % Per the specs, /IT should be translated to an "intent" attribute,
+    % but the exported attribute is named "IT" as well. We simple do both
+    % so that no matter whether an application adheres to the specs or
+    % expects flawed Adobe export can work with what we write.
+    //stringbuffer cvs     % nameInStringBuffer
+    dup length string dup  % nameInStringBuffer finalString finalString
+    3 -1 roll              % finalString finalString nameInStringBuffer
+    0 exch                 % finalString finalString 0 nameInStringBuffer
+    putinterval            % finalString
+    dup                    % finalString finalString
+    (IT) exch              % finalString (IT) finalString
+    2 array astore         % finalString itAttArray
+    exch (intent) exch     % itAttArray (intent) finalString
+  } bind
+
+  /F {                              % bitmask
+    [ exch                          % [ bitmask
+    % This is a bitmask value
+    {
+      (invisible)      % 1
+      (hidden)         % 2
+      (print)          % 3
+      (nozoom)         % 4
+      (norotate)       % 5
+      (noview)         % 6
+      (readonly)       % 7
+      (locked)         % 8
+      (togglenoview)   % 9
+      % (LockedContents) % 10  apparently not supported by XFDF (and FDF?)
+    }{                              % [ flag* bitmask flag
+      1 index 2 mod                 % [ flag* bitmask flag bit
+      0 eq { % ifelse               % [ flag* bitmask flag
+        pop                         % [ flag* bitmask
+      }{ % else                     % [ flag* bitmask flag
+        exch                        % [ flag+ bitmask
+      } ifelse                      % [ flag* bitmask
+      % Shift the bitmask one bit further
+      2 idiv                        % [ flag* bitmask'
+    } forall                        % [ flag* bitmask
+    pop ]                           % flagArray
+    (flags) exch                    % (flags) flagArray
+  } bind
+
+  /BS {                             % objNumber
+    getObjByNo                      % borderStyleDict
+    dup /W known { % ifelse         % borderStyleDict
+      /W get                        % width
+      (width) exch                  % (width) width
+    }{ % else                       % borderStyleDict
+      pop                           % -/-
+    } ifelse                        % (width)? width?
+  } bind
+>> def
+
+/implicitKidsWriters <<
+  /FreeText {                              % annotDict
+    dup /RC known { % ifelse               % annotDict
+      (contents-richtext)[] writeStartTag  % annotDict
+      dup /RC get                          % annotDict xmlString
+      % We need to strip the XML declaration, if present
+      (?>) search { % if                   % annotDict htmlBodyString (?>)? xmlDecl?
+        pop pop                            % annotDict htmlBodyString
+      } if                                 % annotDict htmlBodyString
+      //stdout exch writestring            % annotDict
+      (contents-richtext) writeEndTag      % annotDict
+    }{ % else                              % annotDict
+      dup /Contents known { % if           % annotDict
+        (contents)[] writeStartTag         % annotDict
+        dup /Contents get                  % annotDict contentString
+        //stdout exch writestring          % annotDict
+        (contents) writeEndTag             % annotDict
+      } if                                 % annotDict
+    } ifelse                               % annotDict
+
+    dup /DA known {                        % annotDict
+      (defaultappearance)[] writeStartTag  % annotDict
+      dup /DA get                          % annotDict appearanceString
+      //stdout exch writestring            % annotDict
+      (defaultappearance) writeEndTag      % annotDict
+    } if
+
+    dup /DS known {                        % annotDict
+      (defaultstyle)[] writeStartTag       % annotDict
+      dup /DS get                          % annotDict styleString
+      //stdout exch writestring            % annotDict
+      (defaultstyle) writeEndTag           % annotDict
+    } if                                   % annotDict
+
+    pop
+  } bind
+>> def
+
+
+<<
+  % The commands "R" and "obj" take two parameters:
+  %  * The object number
+  %  * The generation number
+  % In XFDF (and maybe even FDF), the generation number doesn't seem to have
+  % meaning, so we discard it by popping.
+  /R /pop load
+  % Leaves on the stack: objectsByNo objNumber
+  /obj {pop //objectsByNo exch} bind
+
+  % Arguments: objectsByNo objNumber object
+  /endobj /put load
+
+  /stream {
+    { % loop
+      currentfile token { % ifelse
+        /endstream eq {
+          exit
+        } if
+      }{ % else
+        % TODO: something is wrong here as the stream
+        %   is expected to end with an "endstream" token.
+        %   How can we signal the error?
+        exit
+      } ifelse
+    } loop
+  } bind
+
+  /trailer {
+    % We've reached the end of the file and can start outputting XFDF.
+    % We push a dictionary that intercepts the final closing dictionary marker
+    <<
+      (>>) cvn {                 % << /Root rootObjNumber
+        end  % end this ">>" interception dictionary
+        >>                       % trailerObj
+        /Root get                % rootObjNumber
+        getObjByNo               % rootObj
+        writeXfdf                % -/-
+      }
+    >> begin
+  }
+
+  /writeXfdf {                   % rootObj
+    (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
+    /FDF get                     % rootObjFdfDict
+    % Loop through all annotations
+    dup /Annots get              % rootObjFdfDict annotNumberArray
+    dup registerChildren         % rootObjFdfDict annotNumberArray
+    (annots) [] writeStartTag    % rootObjFdfDict annotNumberArray
+    {                            % rootObjFdfDict annotNo
+      getObjByNo                 % rootObjFdfDict annotDict
+      dup /Parent known {        % rootObjFdfDict annotDict
+        pop                      % rootObjFdfDict
+      }{                         % rootObjFdfDict annotDict
+        writeAnnot               % rootObjFdfDict
+      } ifelse                   % rootObjFdfDict
+    } forall                     % rootObjFdfDict
+    (annots) writeEndTag         % rootObjFdfDict
+    dup writeDocHref             % rootObjFdfDict
+    dup writeIds                 % rootObjFdfDict
+    pop                          % -/-
+    (xfdf) writeEndTag           % -/-
+    quit                         % -/-
+  }
+
+  /writeDocHref {                % rootObjFdfDict
+    % Document reference (stored in /UF and /F)
+    % TODO:
+    %  * /DOS, /MAC or /UNIX are present, /F is optional.
+    %  * If /UF is present, Adobe recommends using that
+    % Make this more robust!
+    (f) [ [(href)                  % rootObjFdfDict (f) [ [ (href)
+    5 -1 roll                      % (f) [ [ (href) rootObjFdfDict
+    /F get ] ]                     % (f) [[ (href) filepath ]]
+    writeStartTag                  % -/-
+    (f) writeEndTag                % -/-
+  }
+
+  /writeIds {
+    dup /ID known { % ifelse             % rootObjFdfDict
+      (ids) exch [ exch                  % (ids) [ rootObjFdfDict
+      /ID get //string2hexstring forall  % (ids) [ originalId modifiedId
+      (modified) exch                    % (ids) [ originalId (modified) modifiedId
+      2 array astore                     % (ids) [ originalId modifiedAttArray
+      exch (original) exch               % (ids) [ modifiedAttArray (original) originalId
+      2 array astore                     % (ids) [ modifiedIdAttArray originalIdAttAttary
+      ]                                  % (ids) [ modifiedIdAttArray originalIdAttAttary ]
+      writeStartTag
+      (ids) writeEndTag
+    }{ % else
+      pop
+    } ifelse
+  }
+
+  /writeStartTag {                  % name attributes
+    //stdout (<) writestring        % name attributes
+    exch                            % attributes name
+    //stdout exch writestring       % attributes
+    { % forall                      % [attName attValue]
+      //stdout ( ) writestring      % [attName attValue]
+      dup 0 get                     % [attName attValue] attName
+      //stdout exch writestring     % [attName attValue]
+      //stdout (=") writestring     % [attName attValue]
+      1 get                         % attValue
+      dup type                      % attValue attType
+      //attributeTypeHandlers exch  % attValue attributeProcessors attType
+      get exec                      % -/-
+      //stdout (") writestring      % -/-
+    } forall
+    //stdout (>\n) writestring
+  } bind
+
+  /writeEndTag {                 % name
+    //stdout (</) writestring    % name
+    //stdout exch                % stdout name
+    writestring                  % -/-
+    //stdout (>\n) writestring   % -/-
+  } bind
+
+  /registerChildren {               % annotNumberArray
+    {                               % annotObjNumber
+      getObjByNo                    % annotObj
+      dup /Parent known { % ifelse  % annotObj
+        dup /Parent get             % annotObj parentAnnotObjNo
+        getObjByNo                  % annotObj parentAnnotObj
+        % If we haven't already created the /@Kids@ entry, create it now.
+        dup /@Kids@ known { % ifelse
+          /@Kids@ get               % annotObj @Kids@
+          exch true                 % @Kids@ annotObj
+          put                       % -/-
+        }{ % else                   % annotObj parentAnnotObj
+          % Create the children list
+          % For convenience, we use a dictionary instead of an array as
+          % dictionaries auto-extend whereas arrays do not, and order is not
+          % important here.
+          /@Kids@ <<                % annotObj parentAnnotObj /@Kids@ <<
+          4 -1 roll                 % parentAnnotObj /@Kids@ << annotObj
+          true                      % parentAnnotObj /@Kids@ << annotObj true
+          >>                        % parentAnnotObj /@Kids@ @Kids@
+          put                       % -/-
+        } ifelse                    % annotObj @Kids@
+      } { % else                    % annotObj
+        pop                         % -/-
+      } ifelse
+    } forall
+  } bind
+
+  /writeAnnot {                          % annotDict
+    dup /Subtype get                     % annotDict annotType
+    //fdf2XfdfAnnotNames exch get        % annotDict tagName
+    exch 2 copy                          % tagName annotDict tagName annotDict
+    [ exch                               % tagName annotDict tagName [ annotDict
+    { % forall                           % tagName annotDict tagName [ attArray* key value
+      exch //annotPropertyHandlers exch  % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+      2 copy known { % ifelse            % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        get exec                         % tagName annotDict tagName [ attArray* attName attValue
+        2 array astore                   % tagName annotDict tagName [ attArray+
+      }{ % else                          % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        pop pop pop                      % tagName annotDict tagName [ attArray*
+      } ifelse                           % tagName annotDict tagName [ attArray*
+    } forall                             % tagName annotDict tagName [ attArray*
+    ]                                    % tagName annotDict tagName attsDict
+    writeStartTag                        % tagName annotDict
+    dup /@Kids@ known { % if             % tagName annotDict
+      dup /@Kids@ get                    % tagName annotDict childListDict
+      {                                  % tagName annotDict childAnnotDict true
+        pop writeAnnot                   % tagName annotDict
+      } forall                           % tagName annotDict
+    } if                                 % tagName annotDict
+    dup /Subtype get                     % tagName annotDict annotType
+    //implicitKidsWriters exch           % tagName annotDict implicitKidsCreators annotType
+    2 copy known { % ifelse              % tagName annotDict implicitKidsCreators annotType
+      get exec                           % tagName
+    }{ % else                            % tagName annotDict implicitKidsCreators annotType
+      pop pop pop                        % tagName
+    } ifelse                             % tagName
+    writeEndTag
+  } bind
+
+  /getObjByNo {                    % objNumber
+    //objectsByNo exch get         % obj
+  }
+>> end begin  % pop the temporary /objregitry dict, begin the new one
