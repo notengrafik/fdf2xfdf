@@ -1,6 +1,6 @@
 % TODO: Make everything more robust. Expect broken FDF!
 
-% Temporary dicationary for directly referencing //objectsByNo
+% Temporary dictionary for directly referencing //objectsByNo
 <<
   /objectsByNo <<>>
   /stdout (%stdout) (w) file
@@ -75,6 +75,20 @@
       put             % charcode string
     } for
   >>
+
+  /string2hexstring {           % string
+    dup length 2 mul string     % string fullHexstring
+    dup dup 4 -1 roll           % fullHexstring fullHexstring fullHexstring string
+    {                           % fullHexstring remainingHexstring remainingHexstring char
+      0 exch                    % fullHexstring remainingHexstring remainingHexstring 0 char
+      16 //stringbuffer cvrs    % fullHexstring remainingHexstring remainingHexstring 0 charHexstring
+      putinterval               % fullHexstring remainingHexstring
+      dup length 2 sub          % fullHexstring remainingHexstring newRemainingLength
+      2 exch                    % fullHexstring remainingHexstring 2 newRemainingLength
+      getinterval dup           % fullHexstring remainingHexstring' remainingHexstring'
+    } forall                    % fullHexstring remainingHexstring' remainingHexstring'
+    pop pop                     % fullHexstring
+  } bind
 >> begin
 
 /writeEscapedChar {        % charCode
@@ -293,7 +307,9 @@
       } ifelse                   % rootObjFdfDict
     } forall                     % rootObjFdfDict
     (annots) writeEndTag         % rootObjFdfDict
-    writeDocHref                 % -/-
+    dup writeDocHref             % rootObjFdfDict
+    dup writeIds                 % rootObjFdfDict
+    pop                          % -/-
     (xfdf) writeEndTag           % -/-
     quit                         % -/-
   }
@@ -309,6 +325,22 @@
     /F get ] ]                     % (f) [[ (href) filepath ]]
     writeStartTag                  % -/-
     (f) writeEndTag                % -/-
+  }
+
+  /writeIds {
+    dup /ID known { % ifelse             % rootObjFdfDict
+      (ids) exch [ exch                  % (ids) [ rootObjFdfDict
+      /ID get //string2hexstring forall  % (ids) [ originalId modifiedId
+      (modified) exch                    % (ids) [ originalId (modified) modifiedId
+      2 array astore                     % (ids) [ originalId modifiedAttArray
+      exch (original) exch               % (ids) [ modifiedAttArray (original) originalId
+      2 array astore                     % (ids) [ modifiedIdAttArray originalIdAttAttary
+      ]                                  % (ids) [ modifiedIdAttArray originalIdAttAttary ]
+      writeStartTag
+      (ids) writeEndTag
+    }{ % else
+      pop
+    } ifelse
   }
 
   /writeStartTag {                  % name attributes
