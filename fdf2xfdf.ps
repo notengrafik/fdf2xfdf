@@ -150,6 +150,52 @@
   /M {
     (date) exch
   } bind
+
+  /NM {
+    (name) exch
+  } bind
+
+  /Subj {
+    (subject) exch
+  } bind
+
+  /Open {
+    (open) exch
+    % Convert boolean to 'yes' or 'no'
+    {
+      (yes)
+    }{
+      (no)
+    } ifelse
+  } bind
+
+  /T {
+    (title) exch
+  } bind
+
+  /L {                     % coordArray
+    (start) 1 index        % coordArray (start) coordArray
+    0 2 getinterval        % coordArray (start) startCoords
+    2 array astore         % coordArray startAttArray
+    (end) 3 -1 roll        % startAttArray (end) coordArray
+    2 2 getinterval        % startAttArray (end) endCoords
+    % The topmost two elements will be "arrayified" by the calling procedure
+  } bind
+
+  /RD {
+    (fringe) exch
+  } bind
+
+  /IT {
+    (IT) exch              % (IT) name
+    //stringbuffer cvs     % (IT) nameInStringBuffer
+    dup length string dup  % (IT) nameInStringBuffer finalString finalString
+    3 -1 roll              % (IT) finalString finalString nameInStringBuffer
+    0 exch                 % (IT) finalString finalString 0 nameInStringBuffer
+    putinterval            % (IT) finalString
+  } bind
+>> def
+
 >> def
 
 
@@ -287,18 +333,16 @@
     //fdf2XfdfAnnotNames exch get        % annotDict tagName
     exch 2 copy                          % tagName annotDict tagName annotDict
     [ exch                               % tagName annotDict tagName [ annotDict
-    dup                                  % tagName annotDict tagName [ annotDict annotDict
-    {                                    % tagName annotDict tagName [ attArray? ... annotDict key value
-      exch //annotPropertyHandlers exch  % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
-      2 copy known { % ifelse            % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
-        get exec                         % tagName annotDict tagName [ attArray? ... annotDict attName attValue
-        2 array astore                   % tagName annotDict tagName [ attArray? ... annotDict attArray
-        exch                             % tagName annotDict tagName [ attArray+ ... annotDict
-      }{ % else                          % tagName annotDict tagName [ attArray? ... annotDict value annotPropertyHandlers key
-        pop pop pop                      % tagName annotDict tagName [ attArray? ... annotDict
-      } ifelse                           % tagName annotDict tagName [ attArray? ... annotDict
-    } forall                             % tagName annotDict tagName [ attArray? ... annotDict
-    pop ]                                % tagName annotDict tagName attsDict
+    { % forall                           % tagName annotDict tagName [ attArray* key value
+      exch //annotPropertyHandlers exch  % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+      2 copy known { % ifelse            % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        get exec                         % tagName annotDict tagName [ attArray* attName attValue
+        2 array astore                   % tagName annotDict tagName [ attArray+
+      }{ % else                          % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        pop pop pop                      % tagName annotDict tagName [ attArray*
+      } ifelse                           % tagName annotDict tagName [ attArray*
+    } forall                             % tagName annotDict tagName [ attArray*
+    ]                                    % tagName annotDict tagName attsDict
     writeStartTag                        % tagName annotDict
     dup /@Kids@ known { % if             % tagName annotDict
       /@Kids@ get                        % tagName childListDict
