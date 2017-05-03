@@ -1,6 +1,6 @@
 % TODO: Make everything more robust. Expect broken FDF!
 
-% Temporary dictionary for directly referencing //objectsByNo
+% Temporary dictionary for making entries immediately evaluable using "//"
 <<
   /objectsByNo <<>>
   /stdout (%stdout) (w) file
@@ -103,16 +103,20 @@
     //writeEscapedChar forall
   } bind
 
-  /arraytype {                   % array
+  /arraytype {                              % array
     % We turn arrays into comma separated attribute strings
-    () exch                      % separator array
-    {                            % separator number
-      exch                       % number separator
-      //stdout exch writestring  % number
-      % make sure we only convert numbers - they're safe in XML
-      10 //stringbuffer cvrs     % numberString
-      //stdout exch writestring  % -/-
-      (,)                        % separator
+    () exch                               % separator array
+    {                                     % separator value
+      exch                                % value separator
+      //stdout exch writestring           % value
+      dup type /stringtype eq { % ifelse  % value
+         //writeEscapedChar forall
+      }{ % else
+        % make sure we only convert numbers - they're safe in XML
+        10 //stringbuffer cvrs            % numberString
+        //stdout exch writestring         % -/-
+      } ifelse
+      (,)                                 % separator
     } forall
     pop
   } bind
@@ -208,6 +212,34 @@
     0 exch                 % (IT) finalString finalString 0 nameInStringBuffer
     putinterval            % (IT) finalString
   } bind
+
+  /F {                              % bitmask
+    [ exch                          % [ bitmask
+    % This is a bitmask value
+    {
+      (invisible)      % 1
+      (hidden)         % 2
+      (print)          % 3
+      (nozoom)         % 4
+      (norotate)       % 5
+      (noview)         % 6
+      (readonly)       % 7
+      (locked)         % 8
+      (togglenoview)   % 9
+      % (LockedContents) % 10  apparently not supported by XFDF (and FDF?)
+    }{                              % [ flag* bitmask flag
+      1 index 2 mod                 % [ flag* bitmask flag bit
+      0 eq { % ifelse               % [ flag* bitmask flag
+        pop                         % [ flag* bitmask
+      }{ % else                     % [ flag* bitmask flag
+        exch                        % [ flag+ bitmask
+      } ifelse                      % [ flag* bitmask
+      % Shift the bitmask one bit further
+      2 idiv                        % [ flag* bitmask'
+    } forall                        % [ flag* bitmask
+    pop ]                           % flagArray
+    (flags) exch                    % (flags) flagArray
+  }
 >> def
 
 /implicitKidsWriters <<
