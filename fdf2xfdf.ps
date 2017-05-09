@@ -27,6 +27,7 @@
 <<
   /objectsByNo <<>>
   /stdout (%stdout) (w) file
+  /stderr (%stderr) (w) file
   /stringbuffer 128 string def
   /blackColor (#000000)
 
@@ -471,36 +472,45 @@
     } forall
   } bind
 
-  /writeAnnot {                          % annotDict
-    dup /Subtype get                     % annotDict annotType
-    //fdf2XfdfAnnotNames exch get        % annotDict tagName
-    exch 2 copy                          % tagName annotDict tagName annotDict
-    [ exch                               % tagName annotDict tagName [ annotDict
-    { % forall                           % tagName annotDict tagName [ attArray* key value
-      exch //annotPropertyHandlers exch  % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
-      2 copy known { % ifelse            % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
-        get exec                         % tagName annotDict tagName [ attArray* attName attValue
-        2 array astore                   % tagName annotDict tagName [ attArray+
-      }{ % else                          % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
-        pop pop pop                      % tagName annotDict tagName [ attArray*
-      } ifelse                           % tagName annotDict tagName [ attArray*
-    } forall                             % tagName annotDict tagName [ attArray*
-    ]                                    % tagName annotDict tagName attsDict
-    writeStartTag                        % tagName annotDict
-    dup /@Kids@ known { % if             % tagName annotDict
-      dup /@Kids@ get                    % tagName annotDict childListDict
-      {                                  % tagName annotDict childAnnotDict true
-        pop writeAnnot                   % tagName annotDict
-      } forall                           % tagName annotDict
-    } if                                 % tagName annotDict
-    dup /Subtype get                     % tagName annotDict annotType
-    //implicitKidsWriters exch           % tagName annotDict implicitKidsCreators annotType
-    2 copy known { % ifelse              % tagName annotDict implicitKidsCreators annotType
-      get exec                           % tagName
-    }{ % else                            % tagName annotDict implicitKidsCreators annotType
-      pop pop pop                        % tagName
-    } ifelse                             % tagName
-    writeEndTag
+  /writeAnnot {                               % annotDict
+    dup /Subtype get                          % annotDict annotType
+    //fdf2XfdfAnnotNames exch                 % annotDict fdf2XfdfAnnotNames annotType
+    2 copy known { % ifelse                   % annotDict fdf2XfdfAnnotNames annotType
+      get                                     % annotDict tagName
+      exch 2 copy                             % tagName annotDict tagName annotDict
+      [ exch                                  % tagName annotDict tagName [ annotDict
+      { % forall                              % tagName annotDict tagName [ attArray* key value
+        exch //annotPropertyHandlers exch     % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        2 copy known { % ifelse               % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+          get exec                            % tagName annotDict tagName [ attArray* attName attValue
+          2 array astore                      % tagName annotDict tagName [ attArray+
+        }{ % else                             % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+          pop pop pop                         % tagName annotDict tagName [ attArray*
+        } ifelse                              % tagName annotDict tagName [ attArray*
+      } forall                                % tagName annotDict tagName [ attArray*
+      ]                                       % tagName annotDict tagName attsDict
+      writeStartTag                           % tagName annotDict
+      dup /@Kids@ known { % if                % tagName annotDict
+        dup /@Kids@ get                       % tagName annotDict childListDict
+        {                                     % tagName annotDict childAnnotDict true
+          pop writeAnnot                      % tagName annotDict
+        } forall                              % tagName annotDict
+      } if                                    % tagName annotDict
+      dup /Subtype get                        % tagName annotDict annotType
+      //implicitKidsWriters exch              % tagName annotDict implicitKidsCreators annotType
+      2 copy known { % ifelse                 % tagName annotDict implicitKidsCreators annotType
+        get exec                              % tagName
+      }{ % else                               % tagName annotDict implicitKidsCreators annotType
+        pop pop pop                           % tagName
+      } ifelse                                % tagName
+      writeEndTag                             % -/-
+    }{ % else                                 % annotDict fdf2XfdfAnnotNames annotType
+        //stderr (Unsupported: ) writestring  % annotDict fdf2XfdfAnnotNames annotType
+        //stringbuffer  cvs                   % annotDict fdf2XfdfAnnotNames annotTypeString
+        //stderr exch writestring             % annotDict fdf2XfdfAnnotNames
+        //stderr (\n) writestring             % annotDict fdf2XfdfAnnotNames
+        pop pop                               % -/-
+    } ifelse                                  % -/-
   } bind
 
   /getObjByNo {                    % objNumber
