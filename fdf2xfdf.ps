@@ -37,6 +37,9 @@
     /Popup (popup)
     /FreeText (freetext)
     /Square (square)
+    /Text (text)
+    /Highlight (highlight)
+    /Circle (circle)
   >>
 
   /pdf2XMLCharDict <<
@@ -160,6 +163,10 @@
   /Rect {                        % rectArray
     (rect) exch                  % rect rectArray
   } bind
+
+  /QuadPoints {
+    (coords) exch
+  }
 
   /Page {         % pageNumber
     (page) exch
@@ -320,6 +327,8 @@
 
     pop
   } bind
+
+  dup /Text exch
 >> def
 
 
@@ -367,7 +376,7 @@
 
   /writeXfdf {                   % rootObj
     % Adobe Reader doesn't accept this without XML declaration
-    //stdout (<?xml version="1.0"?>\n) writestring % rootObj
+    //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>\n) writestring % rootObj
     (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
