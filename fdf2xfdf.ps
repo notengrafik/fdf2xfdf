@@ -297,7 +297,17 @@
 
   /Name {                           % objString
     (icon) exch
-  }
+  } bind
+
+  /LE {                            % lineEnd
+    (head) exch                    % (head) lineEnd
+    dup type /arraytype eq { % if  % (head) lineEnd
+      {} forall                    % (head) headName tailName
+      (tail) exch                  % (head) headName (tail) tailName
+      2 array astore               % (head) headName tailArray
+      3 1 roll                     % tailArray (head) headName
+    } if                           % tailArray? (head) headName
+  } bind
 >> def
 
 /propToChildConverters <<
@@ -397,7 +407,8 @@
   }
 
   /writeXfdf {                   % rootObj
-    % Adobe Reader doesn't accept this without XML declaration
+    % Adobe Reader doesn't accept this without XML declaration,
+    % plus we'd run into problems if the XML defaulted to UTF-8
     //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>\n) writestring % rootObj
     (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
     /FDF get                     % rootObjFdfDict
