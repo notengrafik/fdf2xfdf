@@ -157,6 +157,11 @@
     10 //stringbuffer cvrs
     //stdout exch writestring
   } bind
+
+  /nametype {
+    //stringbuffer cvs
+    //writeEscapedChar forall
+  } bind
 >> def
 
 /propToAttributeConverters <<
@@ -289,6 +294,10 @@
       pop                           % -/-
     } ifelse                        % (width)? width?
   } bind
+
+  /Name {                           % objString
+    (icon) exch
+  }
 >> def
 
 /propToChildConverters <<
