@@ -159,7 +159,7 @@
   } bind
 >> def
 
-/annotPropertyHandlers <<
+/propToAttributeConverters <<
   /Rect {                        % rectArray
     (rect) exch                  % rect rectArray
   } bind
@@ -291,44 +291,51 @@
   } bind
 >> def
 
-/implicitKidsWriters <<
-  /FreeText {                              % annotDict
-    dup /RC known { % ifelse               % annotDict
-      (contents-richtext)[] writeStartTag  % annotDict
-      dup /RC get                          % annotDict xmlString
-      % We need to strip the XML declaration, if present
-      (?>) search { % if                   % annotDict htmlBodyString (?>)? xmlDecl?
-        pop pop                            % annotDict htmlBodyString
-      } if                                 % annotDict htmlBodyString
-      //stdout exch writestring            % annotDict
-      (contents-richtext) writeEndTag      % annotDict
-    }{ % else                              % annotDict
-      dup /Contents known { % if           % annotDict
-        (contents)[] writeStartTag         % annotDict
-        dup /Contents get                  % annotDict contentString
-        //stdout exch writestring          % annotDict
-        (contents) writeEndTag             % annotDict
-      } if                                 % annotDict
-    } ifelse                               % annotDict
-
-    dup /DA known {                        % annotDict
-      (defaultappearance)[] writeStartTag  % annotDict
-      dup /DA get                          % annotDict appearanceString
-      //stdout exch writestring            % annotDict
-      (defaultappearance) writeEndTag      % annotDict
-    } if
-
-    dup /DS known {                        % annotDict
-      (defaultstyle)[] writeStartTag       % annotDict
-      dup /DS get                          % annotDict styleString
-      //stdout exch writestring            % annotDict
-      (defaultstyle) writeEndTag           % annotDict
-    } if                                   % annotDict
-
-    pop
+/propToChildConverters <<
+  /RC {                                    % annotDict xhtmlString
+    (contents-richtext)[] writeStartTag    % annotDict xhtmlString
+    % We need to strip the XML declaration, if present
+    (?>) search { % if                     % annotDict htmlBodyString (?>)? xmlDecl?
+      pop pop                              % annotDict htmlBodyString
+    } if                                   % annotDict htmlBodyString
+    % In this case, we don't need to escape anything
+    % because it's already proper XHTML
+    //stdout exch writestring              % annotDict
+    (contents-richtext) writeEndTag        % annotDict
+    pop                                    % -/-
   } bind
 
-  dup /Text exch
+  /Contents {                              % annotDict contentString
+    % We only write a contents elemnet if we don't have a richtext (/RC) property.
+    % /Contents is the same as /RC, but strippped of all markup.
+    exch /RC known { % ifelse              % contentString
+      pop                                  % -/-
+    }{ % else                              % contentString
+      (contents)[] writeStartTag           % contentString
+      //writeEscapedChar forall            % -/-
+      (contents) writeEndTag               % annotDict
+    } ifelse
+  } bind
+
+  /DA {                                  % annotDict appearanceString
+    (defaultappearance)[] writeStartTag  % annotDict appearanceString
+    //writeEscapedChar forall            % annotDict
+    (defaultappearance) writeEndTag      % annotDict
+    pop                                  % -/-
+  } bind
+
+  /DS {                             % annotDict styleString
+    (defaultstyle)[] writeStartTag  % annotDict styleString
+    //writeEscapedChar forall       % annotDict
+    (defaultstyle) writeEndTag      % annotDict
+    pop                             % -/-
+  } bind
+>> def
+
+/knownProperties <<
+  propToAttributeConverters {pop true} forall
+  propToChildConverters {pop true} forall
+  {/Subtype /Type /Parent /@Kids@} {true} forall
 >> def
 
 
@@ -487,10 +494,11 @@
     2 copy known { % ifelse                   % annotDict fdf2XfdfAnnotNames annotType
       get                                     % annotDict tagName
       exch 2 copy                             % tagName annotDict tagName annotDict
+      % Create array of attributes:
       [ exch                                  % tagName annotDict tagName [ annotDict
       { % forall                              % tagName annotDict tagName [ attArray* key value
-        exch //annotPropertyHandlers exch     % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
-        2 copy known { % ifelse               % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
+        exch //propToAttributeConverters exch % tagName annotDict tagName [ attArray* value propToAttributeConverters key
+        2 copy known { % ifelse               % tagName annotDict tagName [ attArray* value propToAttributeConverters key
           get exec                            % tagName annotDict tagName [ attArray* attName attValue
           2 array astore                      % tagName annotDict tagName [ attArray+
         }{ % else                             % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
@@ -499,22 +507,37 @@
       } forall                                % tagName annotDict tagName [ attArray*
       ]                                       % tagName annotDict tagName attsDict
       writeStartTag                           % tagName annotDict
+      % Write children
       dup /@Kids@ known { % if                % tagName annotDict
         dup /@Kids@ get                       % tagName annotDict childListDict
         {                                     % tagName annotDict childAnnotDict true
           pop writeAnnot                      % tagName annotDict
         } forall                              % tagName annotDict
       } if                                    % tagName annotDict
-      dup /Subtype get                        % tagName annotDict annotType
-      //implicitKidsWriters exch              % tagName annotDict implicitKidsCreators annotType
-      2 copy known { % ifelse                 % tagName annotDict implicitKidsCreators annotType
-        get exec                              % tagName
-      }{ % else                               % tagName annotDict implicitKidsCreators annotType
-        pop pop pop                           % tagName
-      } ifelse                                % tagName
+      dup dup { % forall                      % tagName annotDict annotDict key value
+        exch //propToChildConverters exch     % tagName annotDict annotDict value propToChildConverters key
+        2 copy known { % ifelse               % tagName annotDict annotDict value propToChildConverters key
+          get exec                            % tagName annotDict
+        }{ % else                             % tagName annotDict annotDict value propToChildConverters key
+          pop pop pop pop                     % tagName annotDict
+        } ifelse                              % tagName annotDict
+        dup                                   % tagName annotDict annotDict
+      } forall                                % tagName annotDict annotDict
+      pop                                     % tagName annotDict
+      { % forall                              % tagName key value
+        pop dup //knownProperties exch        % tagName key knownProperties key
+        known {                               % tagName key
+          pop                                 % tagName
+        }{ % else                             % tagName key
+          //stderr (Unsupported annotation property: ) writestring  % annotDict annotDict annotDict key
+          //stringbuffer cvs                  % tagName keyString
+          //stderr exch writestring           % tagName
+          //stderr (\n) writestring           % tagName
+        } ifelse                              % tagName
+      } forall                                % tagName
       writeEndTag                             % -/-
     }{ % else                                 % annotDict fdf2XfdfAnnotNames annotType
-        //stderr (Unsupported: ) writestring  % annotDict fdf2XfdfAnnotNames annotType
+        //stderr (Unsupported annotation type: ) writestring  % annotDict fdf2XfdfAnnotNames annotType
         //stringbuffer  cvs                   % annotDict fdf2XfdfAnnotNames annotTypeString
         //stderr exch writestring             % annotDict fdf2XfdfAnnotNames
         //stderr (\n) writestring             % annotDict fdf2XfdfAnnotNames
