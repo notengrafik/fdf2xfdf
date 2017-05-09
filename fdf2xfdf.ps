@@ -330,12 +330,18 @@
     (defaultstyle) writeEndTag      % annotDict
     pop                             % -/-
   } bind
+
+  /Popup {                          % annotDict objNumber
+    getObjByNo                      % annotDict popupObj
+    writeAnnot                      % annotDict
+    pop
+  } bind
 >> def
 
 /knownProperties <<
   propToAttributeConverters {pop true} forall
   propToChildConverters {pop true} forall
-  {/Subtype /Type /Parent /@Kids@} {true} forall
+  {/Subtype /Type /Parent} {true} forall
 >> def
 
 
@@ -388,7 +394,6 @@
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
     dup /Annots get              % rootObjFdfDict annotNumberArray
-    dup registerChildren         % rootObjFdfDict annotNumberArray
     (annots) [] writeStartTag    % rootObjFdfDict annotNumberArray
     {                            % rootObjFdfDict annotNo
       getObjByNo                 % rootObjFdfDict annotDict
@@ -460,34 +465,6 @@
     //stdout (>\n) writestring   % -/-
   } bind
 
-  /registerChildren {               % annotNumberArray
-    {                               % annotObjNumber
-      getObjByNo                    % annotObj
-      dup /Parent known { % ifelse  % annotObj
-        dup /Parent get             % annotObj parentAnnotObjNo
-        getObjByNo                  % annotObj parentAnnotObj
-        % If we haven't already created the /@Kids@ entry, create it now.
-        dup /@Kids@ known { % ifelse
-          /@Kids@ get               % annotObj @Kids@
-          exch true                 % @Kids@ annotObj
-          put                       % -/-
-        }{ % else                   % annotObj parentAnnotObj
-          % Create the children list
-          % For convenience, we use a dictionary instead of an array as
-          % dictionaries auto-extend whereas arrays do not, and order is not
-          % important here.
-          /@Kids@ <<                % annotObj parentAnnotObj /@Kids@ <<
-          4 -1 roll                 % parentAnnotObj /@Kids@ << annotObj
-          true                      % parentAnnotObj /@Kids@ << annotObj true
-          >>                        % parentAnnotObj /@Kids@ @Kids@
-          put                       % -/-
-        } ifelse                    % annotObj @Kids@
-      } { % else                    % annotObj
-        pop                         % -/-
-      } ifelse
-    } forall
-  } bind
-
   /writeAnnot {                               % annotDict
     dup /Subtype get                          % annotDict annotType
     //fdf2XfdfAnnotNames exch                 % annotDict fdf2XfdfAnnotNames annotType
@@ -505,15 +482,9 @@
           pop pop pop                         % tagName annotDict tagName [ attArray*
         } ifelse                              % tagName annotDict tagName [ attArray*
       } forall                                % tagName annotDict tagName [ attArray*
-      ]                                       % tagName annotDict tagName attsDict
+      ]                                       % tagName annotDict tagName attsArray
       writeStartTag                           % tagName annotDict
       % Write children
-      dup /@Kids@ known { % if                % tagName annotDict
-        dup /@Kids@ get                       % tagName annotDict childListDict
-        {                                     % tagName annotDict childAnnotDict true
-          pop writeAnnot                      % tagName annotDict
-        } forall                              % tagName annotDict
-      } if                                    % tagName annotDict
       dup dup { % forall                      % tagName annotDict annotDict key value
         exch //propToChildConverters exch     % tagName annotDict annotDict value propToChildConverters key
         2 copy known { % ifelse               % tagName annotDict annotDict value propToChildConverters key
@@ -524,6 +495,7 @@
         dup                                   % tagName annotDict annotDict
       } forall                                % tagName annotDict annotDict
       pop                                     % tagName annotDict
+      % We check for the presence of unsupported properties
       { % forall                              % tagName key value
         pop dup //knownProperties exch        % tagName key knownProperties key
         known {                               % tagName key
