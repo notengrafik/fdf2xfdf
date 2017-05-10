@@ -40,6 +40,7 @@
     /Text (text)
     /Highlight (highlight)
     /Circle (circle)
+    /Ink (ink)
   >>
 
   /pdf2XMLCharDict <<
@@ -348,6 +349,17 @@
     pop                             % -/-
   } bind
 
+  /InkList {                        % annotDict inkListArray
+    (inklist)[] writeStartTag       % annotDict inkListArray
+    {                               % annotDict coordArray
+      (gesture)[] writeStartTag     % annotDict coordArray
+      writeVertexArray              % annotDict
+      (gesture) writeEndTag         % annotDict
+    } forall                        % annotDict
+    (inklist) writeEndTag           % annotDict
+    pop                             % -/-
+  } bind
+
   /Popup {                          % annotDict objNumber
     getObjByNo                      % annotDict popupObj
     writeAnnot                      % annotDict
@@ -559,5 +571,18 @@
     sub                             % hexString hexStringWithHash hexStringWithHash leadingZerosAndHashesCount
     4 -1 roll                       % hexStringWithHash hexStringWithHash leadingZerosAndHashesCount hexString
     putinterval                     % hexStringWithHash
+  } bind
+
+  /writeVertexArray {                 % coordArray
+    (,)(;)()                          % coordArray sep sep sep
+    4 -1 roll                         % sep sep sep coordArray
+    {                                 % sep sep sep coord
+      exch //stdout exch              % sep sep coord stdout sep
+      writestring                     % sep sep coord
+      10 //stringbuffer cvrs          % sep sep coordString
+      //stdout exch writestring       % sep sep
+      exch dup                        % sep sep sep
+    } forall                          % sep sep sep
+    pop pop pop
   } bind
 >> end begin  % pop the temporary /objregitry dict, begin the new one
