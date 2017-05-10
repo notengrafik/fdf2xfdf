@@ -167,6 +167,26 @@
   } bind
 >> def
 
+/borderEffectToAttributeConverters <<
+  /S {                    % styleName
+    /C eq { % ifelse
+      (style)(cloudy)
+    }{ % else
+      (style)(solid)
+    } ifelse
+  } bind
+
+  /I {                 % intensityValue
+    (intensity) exch
+  } bind
+>> def
+
+/borderStyleToAttributeConverters <<
+  /W {                    % borderWidth
+    (width) exch
+  } bind
+>> def
+
 /propToAttributeConverters <<
   /Rect {                 % rectArray
     (rect) exch           % rect rectArray
@@ -231,10 +251,8 @@
   /L {                    % coordArray
     (start) 1 index       % coordArray (start) coordArray
     0 2 getinterval       % coordArray (start) startCoords
-    2 array astore        % coordArray startAttArray
-    (end) 3 -1 roll       % startAttArray (end) coordArray
-    2 2 getinterval       % startAttArray (end) endCoords
-    % The topmost two elements will be "arrayified" by the calling procedure
+    (end) 4 -1 roll       % (start) startCoords (end) coordArray
+    2 2 getinterval       % (start) startCoords (end) endCoords
   } bind
 
   /RD {                   % fringeRectArray
@@ -252,10 +270,8 @@
     3 -1 roll              % finalString finalString nameInStringBuffer
     0 exch                 % finalString finalString 0 nameInStringBuffer
     putinterval            % finalString
-    dup                    % finalString finalString
-    (IT) exch              % finalString (IT) finalString
-    2 array astore         % finalString itAttArray
-    exch (intent) exch     % itAttArray (intent) finalString
+    (IT) exch              % (IT) finalString
+    (intent) 1 index       % (IT) finalString (intent) finalString
   } bind
 
   /F {                              % bitmask
@@ -286,42 +302,34 @@
     (flags) exch                    % (flags) flagArray
   } bind
 
-  /BE {                             % borderEffectDict
-    % First, handle border style "/S"
-    dup /S known { % ifelse         % borderEffectDict
-      % Border style can be /S (solid) or /C (cloud)
-      dup /S get                    % borderEffectDict borderStyleName
-    }{ % else                       % borderEffectDict
-      % Confusingly, the name for "solid" is "/S", just like
-      % the name of the style property itself.
-      /S                            % borderEffectDict borderStyleName
-    } ifelse
-    /C eq { % ifelse
-      [(style)(cloudy)]
-    }{ % else
-      [(style)(solid)]
-    } ifelse
-
-    % Now, handle border effect intensity "/I"
-    exch dup /I known { % ifelse    % borderStyleArray borderEffectDict
-      /I get                        % borderStyleArray borderIntensity
-    }{ % else                       % borderStyleArray borderEffectDict
-      pop 0                         % borderStyleArray borderItensity
-    } ifelse                        % borderStyleArray borderItensity
-    (intensity) exch                % borderStyleArray (intensity) borderItensity
+  /BE {                                    % borderEffectDict
+    { % forall                             % key value
+      exch                                 % value key
+      //borderEffectToAttributeConverters  % value key borderEffectToAttributeConverters
+      exch get                             % value borderEffectConverter
+      exec                                 % attName attValue
+    } forall
   } bind
 
-  /BS {                             % objOrObjNumber
-    % TODO: Also support the /D (dashes) and /S (style) properties
-    dup type /integertype eq { % if % objOrObjNumber
-      getObjByNo                    % borderStyleDict
-    } if
-    dup /W known { % ifelse         % borderStyleDict
-      /W get                        % width
-      (width) exch                  % (width) width
-    }{ % else                       % borderStyleDict
-      pop                           % -/-
-    } ifelse                        % (width)? width?
+  /BS {                                    % borderStyleDictOrReference
+    dup type /integertype eq { % if        % borderStyleReference
+      getObjByNo                           % borderStyleDict
+    } if                                   % borderStyleDict
+    { % forall                             % key value
+      exch                                 % value key
+      //borderStyleToAttributeConverters   % value key borderStyleToAttributeConverters
+      exch                                 % value borderStyleToAttributeConverters key
+      2 copy known { % ifelse              % value borderStyleToAttributeConverters key
+        get exec                           % attName attValue
+      }{ % else                            % value borderStyleToAttributeConverters key
+        //stderr (Unsupported border style property: ) writestring  % value borderStyleToAttributeConverters key
+        //stringbuffer cvs                 % value borderStyleToAttributeConverters keyAsString
+        //stderr exch writestring          % value borderStyleToAttributeConverters
+        //stderr (\n) writestring          % value borderStyleToAttributeConverters
+        pop pop                            % -/-
+      } ifelse
+    } forall
+    (aft)=
   } bind
 
   /Name {                           % objString
@@ -330,18 +338,20 @@
 
   /LE {                            % lineEnd
     (head) exch                    % (head) lineEnd
-    dup type /arraytype eq { % if  % (head) lineEnd
-      {} forall                    % (head) headName tailName
-      (tail) exch                  % (head) headName (tail) tailName
-      2 array astore               % (head) headName tailArray
-      3 1 roll                     % tailArray (head) headName
+    dup type /arraytype eq { % if  % (head) lineEndArray
+      dup length 1 eq { % ifelse   % (head) lineEndArray
+        {} forall                  % (head) headName
+      }{ % else                    % (head) lineEndArray
+        {} forall                  % (head) headName tailName
+        (tail) exch                % (head) headName (tail) tailName
+      } ifelse                     % tailArray? (head) headName
     } if                           % tailArray? (head) headName
   } bind
 >> def
 
 /propToChildConverters <<
   /RC {                                    % annotDict xhtmlString
-    (contents-richtext)[] writeStartTag    % annotDict xhtmlString
+    (contents-richtext) mark writeStartTag % annotDict xhtmlString
     % We need to strip the XML declaration, if present
     (?>) search { % if                     % annotDict htmlBodyString (?>)? xmlDecl?
       pop pop                              % annotDict htmlBodyString
@@ -359,30 +369,30 @@
     exch /RC known { % ifelse              % contentString
       pop                                  % -/-
     }{ % else                              % contentString
-      (contents)[] writeStartTag           % contentString
+      (contents) mark writeStartTag        % contentString
       //writeEscapedChar forall            % -/-
       (contents) writeEndTag               % annotDict
     } ifelse
   } bind
 
-  /DA {                                  % annotDict appearanceString
-    (defaultappearance)[] writeStartTag  % annotDict appearanceString
-    //writeEscapedChar forall            % annotDict
-    (defaultappearance) writeEndTag      % annotDict
-    pop                                  % -/-
+  /DA {                                     % annotDict appearanceString
+    (defaultappearance) mark writeStartTag  % annotDict appearanceString
+    //writeEscapedChar forall               % annotDict
+    (defaultappearance) writeEndTag         % annotDict
+    pop                                     % -/-
   } bind
 
-  /DS {                             % annotDict styleString
-    (defaultstyle)[] writeStartTag  % annotDict styleString
-    //writeEscapedChar forall       % annotDict
-    (defaultstyle) writeEndTag      % annotDict
-    pop                             % -/-
+  /DS {                                % annotDict styleString
+    (defaultstyle) mark writeStartTag  % annotDict styleString
+    //writeEscapedChar forall          % annotDict
+    (defaultstyle) writeEndTag         % annotDict
+    pop                                % -/-
   } bind
 
   /InkList {                        % annotDict inkListArray
-    (inklist)[] writeStartTag       % annotDict inkListArray
+    (inklist) mark writeStartTag    % annotDict inkListArray
     {                               % annotDict coordArray
-      (gesture)[] writeStartTag     % annotDict coordArray
+      (gesture) mark writeStartTag  % annotDict coordArray
       writeVertexArray              % annotDict
       (gesture) writeEndTag         % annotDict
     } forall                        % annotDict
@@ -397,7 +407,7 @@
   } bind
 
   /Vertices {                       % annotDict vertexArray
-    (vertices)[] writeStartTag      % annotDict vertexArray
+    (vertices) mark writeStartTag   % annotDict vertexArray
     writeVertexArray                % annotDict
     (vertices) writeEndTag          % annotDict
     pop                             % -/-
@@ -457,11 +467,11 @@
     % Adobe Reader doesn't accept this without XML declaration,
     % plus we'd run into problems if the XML defaulted to UTF-8
     //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>) writestring % rootObj
-    (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
+    (xfdf) mark (xmlns) (http://ns.adobe.com/xfdf/) writeStartTag
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
     dup /Annots get              % rootObjFdfDict annotNumberArray
-    (annots) [] writeStartTag    % rootObjFdfDict annotNumberArray
+    (annots) mark writeStartTag  % rootObjFdfDict annotNumberArray
     { % forall                   % rootObjFdfDict annotNo
       getObjByNo                 % rootObjFdfDict annotDict
       dup /Parent known {        % rootObjFdfDict annotDict
@@ -484,22 +494,19 @@
     %  * /DOS, /MAC or /UNIX are present, /F is optional.
     %  * If /UF is present, Adobe recommends using that
     % Make this more robust!
-    (f) [ [(href)                  % rootObjFdfDict (f) [ [ (href)
-    5 -1 roll                      % (f) [ [ (href) rootObjFdfDict
-    /F get ] ]                     % (f) [[ (href) filepath ]]
+    (f) mark (href)                % rootObjFdfDict (f) mark (href)
+    4 -1 roll                      % (f) mark (href) rootObjFdfDict
+    /F get                         % (f) [[ (href) filepath
     writeStartTag                  % -/-
     (f) writeEndTag                % -/-
   }
 
   /writeIds {
     dup /ID known { % ifelse             % rootObjFdfDict
-      (ids) exch [ exch                  % (ids) [ rootObjFdfDict
-      /ID get //string2hexstring forall  % (ids) [ originalId modifiedId
-      (modified) exch                    % (ids) [ originalId (modified) modifiedId
-      2 array astore                     % (ids) [ originalId modifiedAttArray
-      exch (original) exch               % (ids) [ modifiedAttArray (original) originalId
-      2 array astore                     % (ids) [ modifiedIdAttArray originalIdAttAttary
-      ]                                  % (ids) [ modifiedIdAttArray originalIdAttAttary ]
+      (ids) exch mark exch               % (ids) mark rootObjFdfDict
+      /ID get //string2hexstring forall  % (ids) mark originalId modifiedId
+      (original) 3 1 roll                % (ids) mark (original) originalId modifiedId
+      (modified) exch                    % (ids) mark (original) originalId (modified) modifiedId
       writeStartTag
       (ids) writeEndTag
     }{ % else
@@ -507,22 +514,23 @@
     } ifelse
   }
 
-  /writeStartTag {                  % name attributes
-    //stdout (\n<) writestring      % name attributes
-    exch                            % attributes name
-    //stdout exch writestring       % attributes
-    { % forall                      % [attName attValue]
-      //stdout ( ) writestring      % [attName attValue]
-      dup 0 get                     % [attName attValue] attName
-      //stdout exch writestring     % [attName attValue]
-      //stdout (=") writestring     % [attName attValue]
-      1 get                         % attValue
-      dup type                      % attValue attType
-      //attributeTypeHandlers exch  % attValue attributeProcessors attType
-      get exec                      % -/-
-      //stdout (") writestring      % -/-
-    } forall
-    //stdout (>) writestring
+  /writeStartTag {                  % name mark ...
+    //stdout (\n<) writestring      % name mark ...
+    counttomark 2 add -1 roll       % mark ... name
+    //stdout exch writestring       % mark ...
+    { % loop                        % mark ...
+      dup mark eq {exit} if         % mark ... attName attValue
+      //stdout ( ) writestring      % mark ... attName attValue
+      exch                          % mark ... attValue attName
+      //stdout exch writestring     % mark ... attValue
+      //stdout (=") writestring     % mark ... attValue
+      dup type                      % mark ... attValue attType
+      //attributeTypeHandlers exch  % mark ... attValue attributeProcessors attType
+      get exec                      % mark ...
+      //stdout (") writestring      % mark ...
+    } loop                          % mark
+    //stdout (>) writestring        % mark
+    pop                             % -/-
   } bind
 
   /writeEndTag {                 % name
@@ -539,17 +547,15 @@
       get                                     % annotDict tagName
       exch 2 copy                             % tagName annotDict tagName annotDict
       % Create array of attributes:
-      [ exch                                  % tagName annotDict tagName [ annotDict
+      mark exch                                  % tagName annotDict tagName [ annotDict
       { % forall                              % tagName annotDict tagName [ attArray* key value
-        exch //propToAttributeConverters exch % tagName annotDict tagName [ attArray* value propToAttributeConverters key
-        2 copy known { % ifelse               % tagName annotDict tagName [ attArray* value propToAttributeConverters key
-          get exec                            % tagName annotDict tagName [ attArray* attName attValue
-          2 array astore                      % tagName annotDict tagName [ attArray+
-        }{ % else                             % tagName annotDict tagName [ attArray* value annotPropertyHandlers key
-          pop pop pop                         % tagName annotDict tagName [ attArray*
-        } ifelse                              % tagName annotDict tagName [ attArray*
-      } forall                                % tagName annotDict tagName [ attArray*
-      ]                                       % tagName annotDict tagName attsArray
+        exch //propToAttributeConverters exch % tagName annotDict tagName [ ... value propToAttributeConverters key
+        2 copy known { % ifelse               % tagName annotDict tagName [ ... value propToAttributeConverters key
+          get exec                            % tagName annotDict tagName [ ... attName attValue
+        }{ % else                             % tagName annotDict tagName [ ... value annotPropertyHandlers key
+          pop pop pop                         % tagName annotDict tagName [ ...
+        } ifelse                              % tagName annotDict tagName [ ...
+      } forall                                % tagName annotDict tagName [ ...
       writeStartTag                           % tagName annotDict
       % Write children
       dup dup { % forall                      % tagName annotDict annotDict key value
@@ -622,4 +628,4 @@
     } forall                          % sep sep sep
     pop pop pop
   } bind
->> end begin  % pop the temporary /objregitry dict, begin the new one
+>> end begin  % pop the temporary /objregistry dict, begin the new one
