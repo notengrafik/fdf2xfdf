@@ -453,7 +453,7 @@
   /writeXfdf {                   % rootObj
     % Adobe Reader doesn't accept this without XML declaration,
     % plus we'd run into problems if the XML defaulted to UTF-8
-    //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>\n) writestring % rootObj
+    //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>) writestring % rootObj
     (xfdf) [[(xmlns) (http://ns.adobe.com/xfdf/)]] writeStartTag
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
@@ -505,7 +505,7 @@
   }
 
   /writeStartTag {                  % name attributes
-    //stdout (<) writestring        % name attributes
+    //stdout (\n<) writestring      % name attributes
     exch                            % attributes name
     //stdout exch writestring       % attributes
     { % forall                      % [attName attValue]
@@ -519,14 +519,14 @@
       get exec                      % -/-
       //stdout (") writestring      % -/-
     } forall
-    //stdout (>\n) writestring
+    //stdout (>) writestring
   } bind
 
   /writeEndTag {                 % name
     //stdout (</) writestring    % name
     //stdout exch                % stdout name
     writestring                  % -/-
-    //stdout (>\n) writestring   % -/-
+    //stdout (>) writestring   % -/-
   } bind
 
   /writeAnnot {                               % annotDict
