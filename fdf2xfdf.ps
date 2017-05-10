@@ -181,9 +181,27 @@
   } bind
 >> def
 
+/borderStyleNames <<
+  /S (solid)
+  /D (dash)
+  /B (bevelled)
+  /I (inset)
+  /U (underline)
+>> def
+
 /borderStyleToAttributeConverters <<
   /W {                    % borderWidth
     (width) exch
+  } bind
+
+  /S {                       % styleName
+    (style) exch             % (style) styleName
+    //borderStyleNames exch  % (style) borderStyleNames styleName
+    get                      % (style) styleString
+  } bind
+
+  /D {                       % dashArray
+    (dashes) exch
   } bind
 >> def
 
