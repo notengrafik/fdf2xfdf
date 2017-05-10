@@ -137,15 +137,15 @@
       exch                                % value separator
       //stdout exch writestring           % value
       dup type /stringtype eq { % ifelse  % value
-         //writeEscapedChar forall
-      }{ % else
+         //writeEscapedChar forall        % -/-
+      }{ % else                           % number
         % make sure we only convert numbers - they're safe in XML
         10 //stringbuffer cvrs            % numberString
         //stdout exch writestring         % -/-
-      } ifelse
+      } ifelse                            % -/-
       (,)                                 % separator
-    } forall
-    pop
+    } forall                              % separator
+    pop                                   % -/-
   } bind
 
   /integertype {
@@ -165,53 +165,53 @@
 >> def
 
 /propToAttributeConverters <<
-  /Rect {                        % rectArray
-    (rect) exch                  % rect rectArray
+  /Rect {                 % rectArray
+    (rect) exch           % rect rectArray
   } bind
 
-  /QuadPoints {
+  /QuadPoints {           % coordArray
     (coords) exch
   }
 
-  /Page {         % pageNumber
+  /Page {                 % pageNumber
     (page) exch
   } bind
 
-  /C {                              % rgbArray
-    rgbArrayToHex                   % hexRgb
-    (color) exch                    % (color) hexRgb
+  /C {                    % rgbArray
+    rgbArrayToHex         % hexRgb
+    (color) exch          % (color) hexRgb
   } bind
 
-  /CA {
+  /CA {                   % opacityValue
     (opacity) exch
   } bind
 
-  /CL {               % calloutLineCoordinateArray
+  /CL {                   % calloutLineCoordinateArray
     (callout) exch
   } bind
 
-  /CreationDate {
+  /CreationDate {         % datestring
     (creationdate) exch
   } bind
 
-  /IC {
+  /IC {                   % colorArray
     rgbArrayToHex
     (interior-color) exch
   } bind
 
-  /M {
+  /M {                    % datestring
     (date) exch
   } bind
 
-  /NM {
+  /NM {                   % uniqueName
     (name) exch
   } bind
 
-  /Subj {
+  /Subj {                 % subjectString
     (subject) exch
   } bind
 
-  /Open {
+  /Open {                 % boolean
     (open) exch
     % Convert boolean to 'yes' or 'no'
     {
@@ -221,24 +221,24 @@
     } ifelse
   } bind
 
-  /T {
+  /T {                    % titleString
     (title) exch
   } bind
 
-  /L {                     % coordArray
-    (start) 1 index        % coordArray (start) coordArray
-    0 2 getinterval        % coordArray (start) startCoords
-    2 array astore         % coordArray startAttArray
-    (end) 3 -1 roll        % startAttArray (end) coordArray
-    2 2 getinterval        % startAttArray (end) endCoords
+  /L {                    % coordArray
+    (start) 1 index       % coordArray (start) coordArray
+    0 2 getinterval       % coordArray (start) startCoords
+    2 array astore        % coordArray startAttArray
+    (end) 3 -1 roll       % startAttArray (end) coordArray
+    2 2 getinterval       % startAttArray (end) endCoords
     % The topmost two elements will be "arrayified" by the calling procedure
   } bind
 
-  /RD {
+  /RD {                   % fringeRectArray
     (fringe) exch
   } bind
 
-  /IT {
+  /IT {                    % polylineName
     % There seems to be a bug in Adobe's XFDF export:
     % Per the specs, /IT should be translated to an "intent" attribute,
     % but the exported attribute is named "IT" as well. We simple do both
