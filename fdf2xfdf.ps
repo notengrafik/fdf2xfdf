@@ -311,8 +311,11 @@
     (intensity) exch                % borderStyleArray (intensity) borderItensity
   } bind
 
-  /BS {                             % objNumber
-    getObjByNo                      % borderStyleDict
+  /BS {                             % objOrObjNumber
+    % TODO: Also support the /D (dashes) and /S (style) properties
+    dup type /integertype eq { % if % objOrObjNumber
+      getObjByNo                    % borderStyleDict
+    } if
     dup /W known { % ifelse         % borderStyleDict
       /W get                        % width
       (width) exch                  % (width) width
@@ -459,7 +462,7 @@
     % Loop through all annotations
     dup /Annots get              % rootObjFdfDict annotNumberArray
     (annots) [] writeStartTag    % rootObjFdfDict annotNumberArray
-    {                            % rootObjFdfDict annotNo
+    { % forall                   % rootObjFdfDict annotNo
       getObjByNo                 % rootObjFdfDict annotDict
       dup /Parent known {        % rootObjFdfDict annotDict
         pop                      % rootObjFdfDict
