@@ -178,27 +178,25 @@
   } bind
 
   /C {                              % rgbArray
-    % Sum up all components to a single number that can be converted to hex
-    0 exch {                        % compoundColorValue colorComponent
-      255 mul round cvi             % compoundColorValue colorComponentByte
-      exch 256 mul                  % colorComponentByte compoundColorValue'
-      add                           % compoundColorValue''
-    } forall                        % compoundColorValue''
-    16 //stringbuffer cvrs          % hexString
-    % Now we need to add a leading hash and possibly leading zeroes.
-    7 string                        % hexString hexStringWithHash
-    % Initialize color with leading hash and all zeroes
-    dup 0 //blackColor putinterval  % hexString hexStringWithHash
-    dup 7                           % hexString hexStringWithHash hexStringWithHash 7
-    3 index length                  % hexString hexStringWithHash hexStringWithHash 7 hexLength
-    sub                             % hexString hexStringWithHash hexStringWithHash leadingZerosAndHashesCount
-    4 -1 roll                       % hexStringWithHash hexStringWithHash leadingZerosAndHashesCount hexString
-    putinterval                     % hexStringWithHash
-    (color) exch                    % (color) hexStringWithHash
+    rgbArrayToHex                   % hexRgb
+    (color) exch                    % (color) hexRgb
+  } bind
+
+  /CA {
+    (opacity) exch
+  } bind
+
+  /CL {               % calloutLineCoordinateArray
+    (callout) exch
   } bind
 
   /CreationDate {
     (creationdate) exch
+  } bind
+
+  /IC {
+    rgbArrayToHex
+    (interior-color) exch
   } bind
 
   /M {
@@ -540,4 +538,26 @@
   /getObjByNo {                    % objNumber
     //objectsByNo exch get         % obj
   }
+
+  % TODO: In principle, the /C or /IC entries from FDF could store arrays with
+  % 0 (transparent), 1 (DeviceGray), 3 (DeviceRGB) or 4 (DeviceCMYK) components.
+  % We only properly handle 3 right now
+  /rgbArrayToHex {                              % rgbArray
+    % Sum up all components to a single number that can be converted to hex
+    0 exch {                        % compoundColorValue colorComponent
+      255 mul round cvi             % compoundColorValue colorComponentByte
+      exch 256 mul                  % colorComponentByte compoundColorValue'
+      add                           % compoundColorValue''
+    } forall                        % compoundColorValue''
+    16 //stringbuffer cvrs          % hexString
+    % Now we need to add a leading hash and possibly leading zeroes.
+    7 string                        % hexString hexStringWithHash
+    % Initialize color with leading hash and all zeroes
+    dup 0 //blackColor putinterval  % hexString hexStringWithHash
+    dup 7                           % hexString hexStringWithHash hexStringWithHash 7
+    3 index length                  % hexString hexStringWithHash hexStringWithHash 7 hexLength
+    sub                             % hexString hexStringWithHash hexStringWithHash leadingZerosAndHashesCount
+    4 -1 roll                       % hexStringWithHash hexStringWithHash leadingZerosAndHashesCount hexString
+    putinterval                     % hexStringWithHash
+  } bind
 >> end begin  % pop the temporary /objregitry dict, begin the new one
