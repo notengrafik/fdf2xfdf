@@ -41,6 +41,8 @@
     /Highlight (highlight)
     /Circle (circle)
     /Ink (ink)
+    /Polygon (polygon)
+    /PolyLine (polyline)
   >>
 
   /pdf2XMLCharDict <<
@@ -284,6 +286,31 @@
     (flags) exch                    % (flags) flagArray
   } bind
 
+  /BE {                             % borderEffectDict
+    % First, handle border style "/S"
+    dup /S known { % ifelse         % borderEffectDict
+      % Border style can be /S (solid) or /C (cloud)
+      dup /S get                    % borderEffectDict borderStyleName
+    }{ % else                       % borderEffectDict
+      % Confusingly, the name for "solid" is "/S", just like
+      % the name of the style property itself.
+      /S                            % borderEffectDict borderStyleName
+    } ifelse
+    /C eq { % ifelse
+      [(style)(cloudy)]
+    }{ % else
+      [(style)(solid)]
+    } ifelse
+
+    % Now, handle border effect intensity "/I"
+    exch dup /I known { % ifelse    % borderStyleArray borderEffectDict
+      /I get                        % borderStyleArray borderIntensity
+    }{ % else                       % borderStyleArray borderEffectDict
+      pop 0                         % borderStyleArray borderItensity
+    } ifelse                        % borderStyleArray borderItensity
+    (intensity) exch                % borderStyleArray (intensity) borderItensity
+  } bind
+
   /BS {                             % objNumber
     getObjByNo                      % borderStyleDict
     dup /W known { % ifelse         % borderStyleDict
@@ -364,6 +391,13 @@
     getObjByNo                      % annotDict popupObj
     writeAnnot                      % annotDict
     pop
+  } bind
+
+  /Vertices {                       % annotDict vertexArray
+    (vertices)[] writeStartTag      % annotDict vertexArray
+    writeVertexArray                % annotDict
+    (vertices) writeEndTag          % annotDict
+    pop                             % -/-
   } bind
 >> def
 
