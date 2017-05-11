@@ -16,3 +16,7 @@ As FDF syntax is virtually a subset of PostScript syntax and PostScript is a pro
 ## What about forms
 
 **fdf2xfdf** is at the moment not directed towards forms data - forms are already well supported by various tools.
+
+## Why is this written in PostScript?
+
+As PostScript is sort of the older brother of PDF, it shares a lot of DNA with PDF - such as syntax, data structures and types. FDF parsing virtually comes for free with PostScript.
