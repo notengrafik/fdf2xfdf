@@ -45,13 +45,23 @@
     /PolyLine (polyline)
   >>
 
-  /pdf2XMLCharDict <<
-    % We list the characters that aren't identical in PDF and Unicode
-    % explicitly.
+  /pdf2XMLCharMap 256 array
 
-    % Is mapping 22 (= 0x16) to 0x17 correct or just a error in the specs?
-    % In any case, it doesn't really matter for the control characters.
-     22 (&#x0017;) % (SYNCRONOUS IDLE) U
+  dup 32 1 255 {    % array array charcode
+    1 string dup 0  % array array charcode string string 0
+    3 index         % array array charcode string string 0 charcode
+    put             % array array charcode string
+    put dup         % array array
+  } for
+
+  <<
+    % PDFDocEncoding is based on ISO 8859-1, with some additions.
+    % We list the characters that aren't identical in PDF and ISO 8859-1
+    % explicitly.  We use ISO 8859-1 for our output.
+
+      9 (&#x0009;) % CHARACTER TABULATION
+     10 (&#x000A;) % LINE FEED
+     13 (&#x000D;) % CARRIAGE RETURN
      24 (&#x02D8;) % BREVE
      25 (&#x02C7;) % CARON
      26 (&#x02C6;) % MODIFIER ACCENT
@@ -60,6 +70,9 @@
      29 (&#x02DB;) % OGONEK
      30 (&#x02DA;) % RING ABOVE
      31 (&#x02DC;) % SMALL TILDE
+     34 (&quot;)   % QUOTATION MARK
+     38 (&amp;)    % AMPERSAND
+     60 (&lt;)     % LESS THAN SIGN
     127 null
     128 (&#x2022;) % BULLET
     129 (&#x2020;) % DAGGER
@@ -95,16 +108,10 @@
     159 null
     160 (&#x20AC;) % EURO SIGN
     173 null
-
-    % Earlier entries overrule later entries, so the escape strings
-    % defined above remain intact when we add the characters that
-    % do not change.
-    1 1 255 {         % charcode
-      1 string dup 0  % charcode string string 0
-      3 index         % charcode string string 0 charcode
-      put             % charcode string
-    } for
-  >>
+  >> {             % array array charcode xmlString
+    put dup        % array array
+  } forall
+  pop
 
   /string2hexstring {           % string
     dup length 2 mul string     % string fullHexstring
@@ -122,7 +129,7 @@
 >> begin
 
 /writeEscapedChar {        % charCode
-  //pdf2XMLCharDict exch   % charToStringMap charCode
+  //pdf2XMLCharMap exch    % charToStringMap charCode
   get                      % string
   //stdout exch            % stdout string
   writestring              % -/-
