@@ -1,22 +1,36 @@
 # fdf2xfdf
 
-Convert PDF annotation exports from FDF to XFDF
+Converts exported PDF annotation from FDF to XFDF.
+
+## Motivation
 
 Directly working with FDF is not fun. It's much easier with XFDF and existing XML support in your tool of choice.
 However, XFDF doesn't seem to receive much love from PDF software such as Foxit Reader, hence the need for a converter.
 
-In the current state, this tool supports just what I need to scratch my itch. It is not very robust and supports only a subset of the existing annotation types and properties. If you need more, feel free to contribute or to contact us.
+## Current state
+
+In the current state, this tool supports just what I need to scratch my own itch. It is not very robust and supports only a subset of the existing annotation types and properties. If you need more, feel free to contribute or to contact us.
 
 ## How to use
 
-As FDF syntax is virtually a subset of PostScript syntax and PostScript is a programming language, it seemed natural to write this tool in PostScript where we get parsing for free. It can be run with Ghostscript:
+This PostScript program can be run on the command line with [GhostScript](http://ghostscript.com/).
 
-    gsnd -q fdf2xfdf.ps my_annotations.fdf > my_annotations.xfdf
+### Mac/Linux
 
-## What about forms
+    gsnd -q fdf2xfdf.ps annots.fdf > annots.xfdf
+
+### Windows
+
+    gswin64c -dNODISPLAY -q fdf2xfdf.ps annots.fdf > annots.xfdf
+
+(Or `gswin32c` for the 32 bit version.) This requires that the GhostScript executables are on the `PATH` environment variable. Alternatively, specifiy the full path to `gswin32c.exe`, e.g.
+
+    "C:\Program Files\gs\gs9.21\bin\gswin64c.exe" -dNODISPLAY -q fdf2xfdf.ps annots.fdf > annots.xfdf
+
+## What about forms?
 
 **fdf2xfdf** is at the moment not directed towards forms data - forms are already well supported by various tools.
 
 ## Why is this written in PostScript?
 
-As PostScript is sort of the older brother of PDF, it shares a lot of DNA with PDF - such as syntax, data structures and types. FDF parsing virtually comes for free with PostScript.
+As PostScript is sort of the older brother of PDF, it shares a lot of DNA with PDF - such as syntax, types and data structures. FDF parsing virtually comes for free with PostScript.
