@@ -480,19 +480,19 @@
   % Arguments: objectsByNo objNumber object
   /endobj /put load
 
-  /stream {
-    { % loop
-      currentfile token { % ifelse
-        /endstream eq {
-          exit
-        } if
-      }{ % else
-        % TODO: something is wrong if we end up here as the stream
-        %   is expected to end with an "endstream" token.
-        %   How can we signal the error?
-        exit
-      } ifelse
-    } loop
+  /stream {                      % streamDictionary
+    dup /Length get              % streamDictionary streamLength
+    currentfile fileposition     % streamDictionary streamLength filePosition
+    add                          % streamDictionary streamEndPosition
+    currentfile exch             % streamDictionary currentFile streamEndPosition
+    setfileposition              % streamDictionary
+    currentfile token pop        % streamDictionary nextToken
+    /endstream eq not { % if
+      % TODO: something is wrong if we end up here as the stream
+      %   is expected to end with an "endstream" token.
+      %   How can we signal the error?
+      quit
+    } if
   } bind
 
   /trailer {
