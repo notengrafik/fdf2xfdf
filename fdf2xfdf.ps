@@ -172,6 +172,11 @@
     //stringbuffer cvs
     //writeEscapedChar forall
   } bind
+
+  /booleantype {
+    {(yes)}{(no)}ifelse
+    //writeEscapedChar forall
+  }
 >> def
 
 /borderEffectToAttributeConverters <<
@@ -232,6 +237,10 @@
 
   /CA {                   % opacityValue
     (opacity) exch
+  } bind
+
+  /Cap {                  % caption flag
+    (caption) exch
   } bind
 
   /CL {                   % calloutLineCoordinateArray
@@ -354,7 +363,6 @@
         pop pop                            % -/-
       } ifelse
     } forall
-    (aft)=
   } bind
 
   /Name {                           % objString
@@ -371,6 +379,16 @@
         (tail) exch                % (head) headName (tail) tailName
       } ifelse                     % tailArray? (head) headName
     } if                           % tailArray? (head) headName
+  } bind
+
+  /Q {                              % justificationCode
+    (justification) exch            % (justification) justificationCode
+    {(left)(centered)(right)} exch  % (justification) justificationValues justificationCode
+    get                             % (justification) justificationValue
+  } bind
+
+  /Rotate {
+    (rotation) exch
   } bind
 >> def
 
@@ -442,7 +460,10 @@
 /knownProperties <<
   propToAttributeConverters {pop true} forall
   propToChildConverters {pop true} forall
-  {/Subtype /Type /Parent} {true} forall
+  {
+    /Subtype /Type /Parent
+    /AP  % TODO: Support the harder to handle /AP property?
+  } {true} forall
 >> def
 
 
@@ -466,7 +487,7 @@
           exit
         } if
       }{ % else
-        % TODO: something is wrong here as the stream
+        % TODO: something is wrong if we end up here as the stream
         %   is expected to end with an "endstream" token.
         %   How can we signal the error?
         exit
