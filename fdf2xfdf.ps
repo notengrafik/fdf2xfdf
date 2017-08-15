@@ -181,10 +181,13 @@
 
 /borderEffectToAttributeConverters <<
   /S {                    % styleName
+    % Both border styles and border effects apparently translate to a style
+    % attribute, but we can't have two style attributes. So we comment out the
+    % style for border effects for now.
     /C eq { % ifelse
-      (style)(cloudy)
+      %(style)(cloudy)
     }{ % else
-      (style)(solid)
+      %(style)(solid)
     } ifelse
   } bind
 
@@ -583,7 +586,7 @@
     //stdout (</) writestring    % name
     //stdout exch                % stdout name
     writestring                  % -/-
-    //stdout (>) writestring   % -/-
+    //stdout (>) writestring     % -/-
   } bind
 
   /writeAnnot {                               % annotDict
@@ -593,7 +596,7 @@
       get                                     % annotDict tagName
       exch 2 copy                             % tagName annotDict tagName annotDict
       % Create array of attributes:
-      mark exch                                  % tagName annotDict tagName [ annotDict
+      mark exch                               % tagName annotDict tagName [ annotDict
       { % forall                              % tagName annotDict tagName [ attArray* key value
         exch //propToAttributeConverters exch % tagName annotDict tagName [ ... value propToAttributeConverters key
         2 copy known { % ifelse               % tagName annotDict tagName [ ... value propToAttributeConverters key
