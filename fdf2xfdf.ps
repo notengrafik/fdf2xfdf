@@ -516,7 +516,14 @@
     % Adobe Reader doesn't accept this without XML declaration,
     % plus we'd run into problems if the XML defaulted to UTF-8
     //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>) writestring % rootObj
-    (xfdf) mark (xmlns) (http://ns.adobe.com/xfdf/) writeStartTag
+    (xfdf) mark
+    (xmlns) (http://ns.adobe.com/xfdf/)
+    % The following declarations are nasty workarounds for Foxit's habit to
+    % give the namespace "http://www.xfa.org/schema/xfa-data/1.0/" either the
+    % namespace "ns2" or "xfa" in XML strings without declaring them.
+    (xmlns:ns2) (http://www.xfa.org/schema/xfa-data/1.0/)
+    (xmlns:xfa) (http://www.xfa.org/schema/xfa-data/1.0/)
+    writeStartTag
     /FDF get                     % rootObjFdfDict
     % Loop through all annotations
     dup /Annots get              % rootObjFdfDict annotNumberArray
