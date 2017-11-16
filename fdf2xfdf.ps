@@ -518,9 +518,11 @@
     //stdout (<?xml version="1.0" encoding="ISO-8859-1"?>) writestring % rootObj
     (xfdf) mark
     (xmlns) (http://ns.adobe.com/xfdf/)
+    (xmlns:xfdf) (http://ns.adobe.com/xfdf/)
     % The following declarations are nasty workarounds for Foxit's habit to
     % give the namespace "http://www.xfa.org/schema/xfa-data/1.0/" either the
-    % namespace "ns2" or "xfa" in XML strings without declaring them.
+    % namespace "ns1", "ns2" or "xfa" in XML strings without declaring them.
+    (xmlns:ns1) (http://www.xfa.org/schema/xfa-data/1.0/)
     (xmlns:ns2) (http://www.xfa.org/schema/xfa-data/1.0/)
     (xmlns:xfa) (http://www.xfa.org/schema/xfa-data/1.0/)
     writeStartTag
