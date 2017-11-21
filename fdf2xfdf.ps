@@ -115,16 +115,23 @@
 
   /string2hexstring {           % string
     dup length 2 mul string     % string fullHexstring
-    dup dup 4 -1 roll           % fullHexstring fullHexstring fullHexstring string
-    {                           % fullHexstring remainingHexstring remainingHexstring char
-      0 exch                    % fullHexstring remainingHexstring remainingHexstring 0 char
-      16 //stringbuffer cvrs    % fullHexstring remainingHexstring remainingHexstring 0 charHexstring
-      putinterval               % fullHexstring remainingHexstring
-      dup length 2 sub          % fullHexstring remainingHexstring newRemainingLength
-      2 exch                    % fullHexstring remainingHexstring 2 newRemainingLength
-      getinterval dup           % fullHexstring remainingHexstring' remainingHexstring'
-    } forall                    % fullHexstring remainingHexstring' remainingHexstring'
-    pop pop                     % fullHexstring
+    dup 3 -1 roll               % fullHexstring fullHexstring string
+    { % forall                  % fullHexstring remainingHexstring char
+      % Iterate over "half-bytes" - most significant half first
+      2 copy                    % fullHexstring remainingHexstring char remainingHexstring char
+      16 -15 1 { % for          % fullHexstring remainingHexstring char remainingHexstring char divisor
+        idiv 16 mod             % fullHexstring remainingHexstring char remainingHexstring halfChar
+        16 //stringbuffer cvrs  % fullHexstring remainingHexstring char remainingHexstring halfCharString
+        0 exch                  % fullHexstring remainingHexstring char remainingHexstring 0 halfCharString
+        putinterval             % fullHexstring remainingHexstring char
+        exch dup length 1 sub   % fullHexstring char remainingHexstring newRemainingLength
+        1 exch                  % fullHexstring char remainingHexstring 1 newRemainingLength
+        getinterval exch        % fullHexstring remainingHexstring' char
+        2 copy                  % fullHexstring remainingHexstring' char remainingHexstring' char
+      } for                     % fullHexstring remainingHexstring' char remainingHexstring' char
+      pop pop pop               % fullHexstring remainingHexstring'
+    } forall                    % fullHexstring remainingHexstring'
+    pop                         % fullHexstring
   } bind
 >> begin
 
