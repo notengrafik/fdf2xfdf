@@ -221,16 +221,33 @@
 >> def
 
 /propToAttributeConverters <<
-  /Rect {                 % rectArray
-    (rect) exch           % rect rectArray
+  /BE {                                    % borderEffectDict
+    { % forall                             % key value
+      exch                                 % value key
+      //borderEffectToAttributeConverters  % value key borderEffectToAttributeConverters
+      exch get                             % value borderEffectConverter
+      exec                                 % attName attValue
+    } forall
   } bind
 
-  /QuadPoints {           % coordArray
-    (coords) exch
-  }
-
-  /Page {                 % pageNumber
-    (page) exch
+  /BS {                                    % borderStyleDictOrReference
+    dup type /integertype eq { % if        % borderStyleReference
+      getObjByNo                           % borderStyleDict
+    } if                                   % borderStyleDict
+    { % forall                             % key value
+      exch                                 % value key
+      //borderStyleToAttributeConverters   % value key borderStyleToAttributeConverters
+      exch                                 % value borderStyleToAttributeConverters key
+      2 copy known { % ifelse              % value borderStyleToAttributeConverters key
+        get exec                           % attName attValue
+      }{ % else                            % value borderStyleToAttributeConverters key
+        //stderr (Unsupported border style property: ) writestring  % value borderStyleToAttributeConverters key
+        //stringbuffer cvs                 % value borderStyleToAttributeConverters keyAsString
+        //stderr exch writestring          % value borderStyleToAttributeConverters
+        //stderr (\n) writestring          % value borderStyleToAttributeConverters
+        pop pop                            % -/-
+      } ifelse
+    } forall
   } bind
 
   /C {                    % rgbArray
@@ -252,63 +269,6 @@
 
   /CreationDate {         % datestring
     (creationdate) exch
-  } bind
-
-  /IC {                   % colorArray
-    rgbArrayToHex
-    (interior-color) exch
-  } bind
-
-  /M {                    % datestring
-    (date) exch
-  } bind
-
-  /NM {                   % uniqueName
-    (name) exch
-  } bind
-
-  /Subj {                 % subjectString
-    (subject) exch
-  } bind
-
-  /Open {                 % boolean
-    (open) exch
-    % Convert boolean to 'yes' or 'no'
-    {
-      (yes)
-    }{
-      (no)
-    } ifelse
-  } bind
-
-  /T {                    % titleString
-    (title) exch
-  } bind
-
-  /L {                    % coordArray
-    (start) 1 index       % coordArray (start) coordArray
-    0 2 getinterval       % coordArray (start) startCoords
-    (end) 4 -1 roll       % (start) startCoords (end) coordArray
-    2 2 getinterval       % (start) startCoords (end) endCoords
-  } bind
-
-  /RD {                   % fringeRectArray
-    (fringe) exch
-  } bind
-
-  /IT {                    % polylineName
-    % There seems to be a bug in Adobe's XFDF export:
-    % Per the specs, /IT should be translated to an "intent" attribute,
-    % but the exported attribute is named "IT" as well. We simple do both
-    % so that no matter whether an application adheres to the specs or
-    % expects flawed Adobe export can work with what we write.
-    //stringbuffer cvs     % nameInStringBuffer
-    dup length string dup  % nameInStringBuffer finalString finalString
-    3 -1 roll              % finalString finalString nameInStringBuffer
-    0 exch                 % finalString finalString 0 nameInStringBuffer
-    putinterval            % finalString
-    (IT) exch              % (IT) finalString
-    (intent) 1 index       % (IT) finalString (intent) finalString
   } bind
 
   /F {                              % bitmask
@@ -339,37 +299,31 @@
     (flags) exch                    % (flags) flagArray
   } bind
 
-  /BE {                                    % borderEffectDict
-    { % forall                             % key value
-      exch                                 % value key
-      //borderEffectToAttributeConverters  % value key borderEffectToAttributeConverters
-      exch get                             % value borderEffectConverter
-      exec                                 % attName attValue
-    } forall
+  /IC {                   % colorArray
+    rgbArrayToHex
+    (interior-color) exch
   } bind
 
-  /BS {                                    % borderStyleDictOrReference
-    dup type /integertype eq { % if        % borderStyleReference
-      getObjByNo                           % borderStyleDict
-    } if                                   % borderStyleDict
-    { % forall                             % key value
-      exch                                 % value key
-      //borderStyleToAttributeConverters   % value key borderStyleToAttributeConverters
-      exch                                 % value borderStyleToAttributeConverters key
-      2 copy known { % ifelse              % value borderStyleToAttributeConverters key
-        get exec                           % attName attValue
-      }{ % else                            % value borderStyleToAttributeConverters key
-        //stderr (Unsupported border style property: ) writestring  % value borderStyleToAttributeConverters key
-        //stringbuffer cvs                 % value borderStyleToAttributeConverters keyAsString
-        //stderr exch writestring          % value borderStyleToAttributeConverters
-        //stderr (\n) writestring          % value borderStyleToAttributeConverters
-        pop pop                            % -/-
-      } ifelse
-    } forall
+  /IT {                    % polylineName
+    % There seems to be a bug in Adobe's XFDF export:
+    % Per the specs, /IT should be translated to an "intent" attribute,
+    % but the exported attribute is named "IT" as well. We simple do both
+    % so that no matter whether an application adheres to the specs or
+    % expects flawed Adobe export can work with what we write.
+    //stringbuffer cvs     % nameInStringBuffer
+    dup length string dup  % nameInStringBuffer finalString finalString
+    3 -1 roll              % finalString finalString nameInStringBuffer
+    0 exch                 % finalString finalString 0 nameInStringBuffer
+    putinterval            % finalString
+    (IT) exch              % (IT) finalString
+    (intent) 1 index       % (IT) finalString (intent) finalString
   } bind
 
-  /Name {                           % objString
-    (icon) exch
+  /L {                    % coordArray
+    (start) 1 index       % coordArray (start) coordArray
+    0 2 getinterval       % coordArray (start) startCoords
+    (end) 4 -1 roll       % (start) startCoords (end) coordArray
+    2 2 getinterval       % (start) startCoords (end) endCoords
   } bind
 
   /LE {                            % lineEnd
@@ -384,15 +338,62 @@
     } if                           % tailArray? (head) headName
   } bind
 
+  /M {                    % datestring
+    (date) exch
+  } bind
+
+  /Name {                           % objString
+    (icon) exch
+  } bind
+
+  /NM {                   % uniqueName
+    (name) exch
+  } bind
+
+  /Open {                 % boolean
+    (open) exch
+    % Convert boolean to 'yes' or 'no'
+    {
+      (yes)
+    }{
+      (no)
+    } ifelse
+  } bind
+
+  /Page {                 % pageNumber
+    (page) exch
+  } bind
+
   /Q {                              % justificationCode
     (justification) exch            % (justification) justificationCode
     {(left)(centered)(right)} exch  % (justification) justificationValues justificationCode
     get                             % (justification) justificationValue
   } bind
 
+  /QuadPoints {           % coordArray
+    (coords) exch
+  }
+
+  /RD {                   % fringeRectArray
+    (fringe) exch
+  } bind
+
+  /Rect {                 % rectArray
+    (rect) exch           % rect rectArray
+  } bind
+
   /Rotate {
     (rotation) exch
   } bind
+
+  /Subj {                 % subjectString
+    (subject) exch
+  } bind
+
+  /T {                    % titleString
+    (title) exch
+  } bind
+
 >> def
 
 /propToChildConverters <<
