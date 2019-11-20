@@ -29,7 +29,11 @@ This PostScript program can be run on the command line with [GhostScript](http:/
 
 ## What about forms?
 
-**fdf2xfdf** is at the moment not directed towards forms data - forms are already well supported by various tools.
+**fdf2xfdf** is at the moment not directed towards forms data. Extracting forms data is very simple and already well supported by various tools:
+
+* https://www.adobe.com/devnet/acrobat/fdftoolkit.html
+* https://www.php.net/manual/en/ref.fdf.php
+* https://github.com/trockenasche/fdf2csv
 
 ## Why is this written in PostScript?
 
