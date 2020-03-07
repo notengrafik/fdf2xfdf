@@ -542,19 +542,32 @@
     (xmlns:ns2) (http://www.xfa.org/schema/xfa-data/1.0/)
     (xmlns:xfa) (http://www.xfa.org/schema/xfa-data/1.0/)
     writeStartTag
-    /FDF get                     % rootObjFdfDict
+    /FDF get                       % rootObjFdfDict
     % Loop through all annotations
-    dup /Annots get              % rootObjFdfDict annotNumberArray
-    (annots) mark writeStartTag  % rootObjFdfDict annotNumberArray
-    { % forall                   % rootObjFdfDict annotNo
-      getObjByNo                 % rootObjFdfDict annotDict
-      dup /Parent known {        % rootObjFdfDict annotDict
-        pop                      % rootObjFdfDict
-      }{                         % rootObjFdfDict annotDict
-        writeAnnot               % rootObjFdfDict
-      } ifelse                   % rootObjFdfDict
-    } forall                     % rootObjFdfDict
-    (annots) writeEndTag         % rootObjFdfDict
+    dup /Annots known
+    { % if
+      (annots) mark writeStartTag  % rootObjFdfDict
+      dup /Annots get              % rootObjFdfDict annotNumberArray
+      { % forall                   % rootObjFdfDict annotNo
+        getObjByNo                 % rootObjFdfDict annotDict
+        dup /Parent known {        % rootObjFdfDict annotDict
+          pop                      % rootObjFdfDict
+        }{                         % rootObjFdfDict annotDict
+          writeAnnot               % rootObjFdfDict
+        } ifelse                   % rootObjFdfDict
+      } forall                     % rootObjFdfDict
+      (annots) writeEndTag         % rootObjFdfDict
+    } if
+    dup /Fields known
+    { % if
+      //stderr (WARNING: Forms support is marginal. Consult README.md\n) writestring
+      (fields) mark writeStartTag  % rootObjFdfDict fieldsArray
+      dup /Fields get              % rootObjFdfDict fieldsArray
+      { % forall
+        writeField
+      } forall
+      (fields) writeEndTag
+    } if
     dup writeDocHref             % rootObjFdfDict
     dup writeIds                 % rootObjFdfDict
     pop                          % -/-
@@ -663,6 +676,37 @@
         pop pop                               % -/-
     } ifelse                                  % -/-
   } bind
+
+  /writeField {                               % fieldDict
+    dup /T known                              % fieldDict bool
+    { %if                                     % fieldDict
+      (field) mark                            % fieldDict (field) mark
+      (name) 3 index /T get                   % fieldDict (field) mark (name) name
+      dup (.) search                          % fieldDict (field) mark (name) name pre? (.)? post? bool
+      { % ifelse                              % fieldDict (field) mark (name) name pre (.) post
+        //stderr (WARNING: Hierarchical fields are not supported: ) writestring
+        3 {//stderr exch writestring} repeat  % fieldDict (field) mark (name) name
+        //stderr (\n) writestring             % fieldDict (field) mark (name) name
+      }{ % else                               % fieldDict (field) mark (name) name name
+        pop                                   % fieldDict (field) mark (name) name
+      } ifelse                                % fieldDict (field) mark (name) name
+      writeStartTag                           % fieldDict
+      dup /V known                            % fieldDict bool
+      { % if                                  % fieldDict
+        dup /V get type /stringtype eq        % fieldDict bool
+        { % ifelse                            % fieldDict
+          (value) mark writeStartTag          % fieldDict
+          dup /V get                          % fieldDict value
+          //writeEscapedChar forall           % fieldDict
+          (value) writeEndTag                 % fieldDict
+        }{ % else                             % fieldDict
+          //stderr (WARNING: Only strings are supported as form fields values.\n) writestring
+        } ifelse                              % fieldDict
+      } if                                    % fieldDict
+      (field) writeEndTag                     % fieldDict
+    } if                                      % fieldDict
+    pop                                       % -/-
+  }
 
   /getObjByNo {                    % objNumber
     //objectsByNo exch get         % obj

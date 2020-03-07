@@ -1,6 +1,6 @@
 # fdf2xfdf
 
-Converts exported PDF annotation from FDF to XFDF.
+Converts exported PDF annotations from FDF to XFDF. Support for forms data is marginal.
 
 ## Motivation
 
@@ -13,7 +13,7 @@ In the current state, this tool supports just what I need to scratch my own itch
 
 ## How to use
 
-This PostScript program can be run on the command line with [GhostScript](http://ghostscript.com/).
+This PostScript program can be run on the command line with [Ghostscript](http://ghostscript.com/).
 
 ### Mac/Linux
 
@@ -29,11 +29,10 @@ This PostScript program can be run on the command line with [GhostScript](http:/
 
 ## What about forms?
 
-**fdf2xfdf** is at the moment not directed towards forms data. Extracting forms data is very simple and already well supported by various tools:
+**fdf2xfdf** is at the moment *not* directed towards forms data, though marginal support is present. See various other tools for alternatives, e.g.:
 
 * https://www.adobe.com/devnet/acrobat/fdftoolkit.html
 * https://www.php.net/manual/en/ref.fdf.php
-* https://github.com/trockenasche/fdf2csv
 
 ## Why is this written in PostScript?
 
